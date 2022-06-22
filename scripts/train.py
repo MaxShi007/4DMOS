@@ -11,6 +11,8 @@ from pytorch_lightning import Trainer
 from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 
+import sys
+sys.path.append("src") 
 import mos4d.datasets.datasets as datasets
 import mos4d.models.models as models
 

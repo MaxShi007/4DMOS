@@ -6,7 +6,7 @@ DATA:
   TRANSFORM: True # If true, the points are pose-aligned before feeding to the model
   POSES: "poses.txt" # Name of the pose file provided in each sequence folder
   SHUFFLE: True
-  NUM_WORKER: 4
+  NUM_WORKER: 16
   DELTA_T_DATA: 0.1 # Time between scans in the dataset (0.1s for KITTI)
   VOXEL_SIZE: 0.1 # Used for discretization in x,y,z when creating a sparse tensor 
   SEMANTIC_CONFIG_FILE: "./config/semantic-kitti-mos.yaml" 
@@ -45,7 +45,7 @@ TRAIN:
   LR_EPOCH: 1
   LR_DECAY: 0.99
   WEIGHT_DECAY: 0.0001
-  BATCH_SIZE: 2
+  BATCH_SIZE: 14 # 14 single gpu
   ACC_BATCHES: 1
   AUGMENTATION: True
 
