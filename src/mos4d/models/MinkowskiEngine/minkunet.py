@@ -52,7 +52,7 @@ class MinkUNetBase(ResNetBase):
     def network_initialization(self, in_channels, out_channels, D):
         # Output of the first conv concated to conv6
         self.inplanes = self.INIT_DIM
-        self.conv0p1s1 = ME.MinkowskiConvolution(
+        self.conv0p1s1 = ME.MinkowskiConvolution( # 1->8
             in_channels,
             self.inplanes,
             kernel_size=self.m_space_n_time(5, 1),
@@ -61,7 +61,7 @@ class MinkUNetBase(ResNetBase):
 
         self.bn0 = ME.MinkowskiBatchNorm(self.inplanes)
 
-        self.conv1p1s2 = ME.MinkowskiConvolution(
+        self.conv1p1s2 = ME.MinkowskiConvolution( # 8->8
             self.inplanes,
             self.inplanes,
             kernel_size=self.m_space_n_time(2, 1),
@@ -70,9 +70,9 @@ class MinkUNetBase(ResNetBase):
         )
         self.bn1 = ME.MinkowskiBatchNorm(self.inplanes)
 
-        self.block1 = self._make_layer(self.BLOCK, self.PLANES[0], self.LAYERS[0])
+        self.block1 = self._make_layer(self.BLOCK, self.PLANES[0], self.LAYERS[0]) # 8->8
 
-        self.conv2p2s2 = ME.MinkowskiConvolution(
+        self.conv2p2s2 = ME.MinkowskiConvolution( # 8->8
             self.inplanes,
             self.inplanes,
             kernel_size=self.m_space_n_time(2, 1),
@@ -81,9 +81,9 @@ class MinkUNetBase(ResNetBase):
         )
         self.bn2 = ME.MinkowskiBatchNorm(self.inplanes)
 
-        self.block2 = self._make_layer(self.BLOCK, self.PLANES[1], self.LAYERS[1])
+        self.block2 = self._make_layer(self.BLOCK, self.PLANES[1], self.LAYERS[1]) # 8->16
 
-        self.conv3p4s2 = ME.MinkowskiConvolution(
+        self.conv3p4s2 = ME.MinkowskiConvolution( # 16->16
             self.inplanes,
             self.inplanes,
             kernel_size=self.m_space_n_time(2, 1),
@@ -92,9 +92,9 @@ class MinkUNetBase(ResNetBase):
         )
 
         self.bn3 = ME.MinkowskiBatchNorm(self.inplanes)
-        self.block3 = self._make_layer(self.BLOCK, self.PLANES[2], self.LAYERS[2])
+        self.block3 = self._make_layer(self.BLOCK, self.PLANES[2], self.LAYERS[2]) #16->32
 
-        self.conv4p8s2 = ME.MinkowskiConvolution(
+        self.conv4p8s2 = ME.MinkowskiConvolution( # 32->32
             self.inplanes,
             self.inplanes,
             kernel_size=self.m_space_n_time(2, 1),
@@ -102,9 +102,9 @@ class MinkUNetBase(ResNetBase):
             dimension=D,
         )
         self.bn4 = ME.MinkowskiBatchNorm(self.inplanes)
-        self.block4 = self._make_layer(self.BLOCK, self.PLANES[3], self.LAYERS[3])
+        self.block4 = self._make_layer(self.BLOCK, self.PLANES[3], self.LAYERS[3]) #32->64
 
-        self.convtr4p16s2 = ME.MinkowskiConvolutionTranspose(
+        self.convtr4p16s2 = ME.MinkowskiConvolutionTranspose( #64->64
             self.inplanes,
             self.PLANES[4],
             kernel_size=self.m_space_n_time(2, 1),
@@ -114,8 +114,8 @@ class MinkUNetBase(ResNetBase):
         self.bntr4 = ME.MinkowskiBatchNorm(self.PLANES[4])
 
         self.inplanes = self.PLANES[4] + self.PLANES[2] * self.BLOCK.expansion
-        self.block5 = self._make_layer(self.BLOCK, self.PLANES[4], self.LAYERS[4])
-        self.convtr5p8s2 = ME.MinkowskiConvolutionTranspose(
+        self.block5 = self._make_layer(self.BLOCK, self.PLANES[4], self.LAYERS[4]) #96->64
+        self.convtr5p8s2 = ME.MinkowskiConvolutionTranspose( #64->32
             self.inplanes,
             self.PLANES[5],
             kernel_size=self.m_space_n_time(2, 1),
@@ -125,8 +125,8 @@ class MinkUNetBase(ResNetBase):
         self.bntr5 = ME.MinkowskiBatchNorm(self.PLANES[5])
 
         self.inplanes = self.PLANES[5] + self.PLANES[1] * self.BLOCK.expansion
-        self.block6 = self._make_layer(self.BLOCK, self.PLANES[5], self.LAYERS[5])
-        self.convtr6p4s2 = ME.MinkowskiConvolutionTranspose(
+        self.block6 = self._make_layer(self.BLOCK, self.PLANES[5], self.LAYERS[5]) #48->32
+        self.convtr6p4s2 = ME.MinkowskiConvolutionTranspose( #32-16
             self.inplanes,
             self.PLANES[6],
             kernel_size=self.m_space_n_time(2, 1),
@@ -136,8 +136,8 @@ class MinkUNetBase(ResNetBase):
         self.bntr6 = ME.MinkowskiBatchNorm(self.PLANES[6])
 
         self.inplanes = self.PLANES[6] + self.PLANES[0] * self.BLOCK.expansion
-        self.block7 = self._make_layer(self.BLOCK, self.PLANES[6], self.LAYERS[6])
-        self.convtr7p2s2 = ME.MinkowskiConvolutionTranspose(
+        self.block7 = self._make_layer(self.BLOCK, self.PLANES[6], self.LAYERS[6]) #24->16
+        self.convtr7p2s2 = ME.MinkowskiConvolutionTranspose(# 16-8
             self.inplanes,
             self.PLANES[7],
             kernel_size=self.m_space_n_time(2, 1),
@@ -147,9 +147,9 @@ class MinkUNetBase(ResNetBase):
         self.bntr7 = ME.MinkowskiBatchNorm(self.PLANES[7])
 
         self.inplanes = self.PLANES[7] + self.INIT_DIM
-        self.block8 = self._make_layer(self.BLOCK, self.PLANES[7], self.LAYERS[7])
+        self.block8 = self._make_layer(self.BLOCK, self.PLANES[7], self.LAYERS[7]) #16->16
 
-        self.final = ME.MinkowskiConvolution(
+        self.final = ME.MinkowskiConvolution( #16->3
             self.PLANES[7] * self.BLOCK.expansion,
             out_channels,
             kernel_size=1,
@@ -159,64 +159,64 @@ class MinkUNetBase(ResNetBase):
         self.relu = ME.MinkowskiReLU(inplace=True)
 
     def forward(self, x):
-        out = self.conv0p1s1(x)
+        out = self.conv0p1s1(x)# 1-8
         out = self.bn0(out)
         out_p1 = self.relu(out)
 
-        out = self.conv1p1s2(out_p1)
+        out = self.conv1p1s2(out_p1) #8-8 /2
         out = self.bn1(out)
         out = self.relu(out)
-        out_b1p2 = self.block1(out)
+        out_b1p2 = self.block1(out) #8-8
 
-        out = self.conv2p2s2(out_b1p2)
+        out = self.conv2p2s2(out_b1p2) #8-8 /2
         out = self.bn2(out)
         out = self.relu(out)
-        out_b2p4 = self.block2(out)
+        out_b2p4 = self.block2(out) #8-16
 
-        out = self.conv3p4s2(out_b2p4)
+        out = self.conv3p4s2(out_b2p4) #16-16 /2
         out = self.bn3(out)
         out = self.relu(out)
-        out_b3p8 = self.block3(out)
+        out_b3p8 = self.block3(out) #16-32
 
         # tensor_stride=16
-        out = self.conv4p8s2(out_b3p8)
+        out = self.conv4p8s2(out_b3p8) #32-32 /2
         out = self.bn4(out)
         out = self.relu(out)
-        out = self.block4(out)
+        out = self.block4(out) #32-64
 
         # tensor_stride=8
-        out = self.convtr4p16s2(out)
+        out = self.convtr4p16s2(out) #64-64 *2
         out = self.bntr4(out)
         out = self.relu(out)
 
-        out = ME.cat(out, out_b3p8)
-        out = self.block5(out)
+        out = ME.cat(out, out_b3p8) #64-96
+        out = self.block5(out) #96-64
 
         # tensor_stride=4
-        out = self.convtr5p8s2(out)
+        out = self.convtr5p8s2(out)#64-32 *2
         out = self.bntr5(out)
         out = self.relu(out)
 
-        out = ME.cat(out, out_b2p4)
-        out = self.block6(out)
+        out = ME.cat(out, out_b2p4) #32-48
+        out = self.block6(out)#48-32
 
         # tensor_stride=2
-        out = self.convtr6p4s2(out)
+        out = self.convtr6p4s2(out) #32-16 *2
         out = self.bntr6(out)
         out = self.relu(out)
 
-        out = ME.cat(out, out_b1p2)
-        out = self.block7(out)
+        out = ME.cat(out, out_b1p2) #16-24
+        out = self.block7(out)#24-16
 
         # tensor_stride=1
-        out = self.convtr7p2s2(out)
+        out = self.convtr7p2s2(out) #16-8 *2
         out = self.bntr7(out)
         out = self.relu(out)
 
-        out = ME.cat(out, out_p1)
-        out = self.block8(out)
+        out = ME.cat(out, out_p1) #8-16
+        out = self.block8(out)# 16-8
 
-        return self.final(out)
+        return self.final(out)#8-3
 
 
 class MinkUNet14(MinkUNetBase):
