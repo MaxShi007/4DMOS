@@ -108,7 +108,8 @@ class KittiSequentialModule(LightningDataModule):
         meta = [item[0] for item in batch]
         past_point_clouds = [item[1] for item in batch]
         past_labels = [item[2] for item in batch]
-        return [meta, past_point_clouds, past_labels]
+        past_flows=[item[3] for item in batch]
+        return [meta, past_point_clouds, past_labels,past_flows]
 
 
 class KittiSequentialDataset(Dataset):
@@ -133,6 +134,8 @@ class KittiSequentialDataset(Dataset):
         self.filename_poses = cfg["DATA"]["POSES"]
 
         # Semantic information
+        self.use_flow=self.cfg["DATA"]["USE_FLOW"]
+
         self.semantic_config = yaml.safe_load(open(cfg["DATA"]["SEMANTIC_CONFIG_FILE"]))
 
         self.n_past_steps = self.cfg["MODEL"]["N_PAST_STEPS"]
@@ -243,9 +246,17 @@ class KittiSequentialDataset(Dataset):
             past_point_clouds, past_labels = self.augment_data(
                 past_point_clouds, past_labels
             )
+        # todo load past flow
+        if self.use_flow:
+            # print('use_flow',self.use_flow)
+            flow_files=[os.path.join(self.root_dir,str(seq).zfill(2),'motionflow_ego_motion_1',str(i).zfill(6)+".flow.npy") for i in past_indices]
+            list_past_flows=[self.read_flows(f) for f in flow_files]
+            past_flows=torch.cat(list_past_flows,dim=0)
+        else:
+            past_flows=[]
 
         meta = (seq, scan_idx, past_indices)
-        return [meta, past_point_clouds, past_labels]
+        return [meta, past_point_clouds, past_labels,past_flows]
 
     def transform_point_cloud(self, past_point_clouds, from_pose, to_pose):
         transformation = torch.Tensor(np.linalg.inv(to_pose) @ from_pose)
@@ -284,6 +295,11 @@ class KittiSequentialDataset(Dataset):
             return selected_labels
         else:
             return torch.Tensor(1, 1).long()
+
+    def read_flows(self,filename):
+        flow=np.load(filename)
+        flow=torch.tensor(flow)
+        return flow
 
     @staticmethod
     def timestamp_tensor(tensor, time):

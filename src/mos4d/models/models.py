@@ -57,14 +57,14 @@ class MOSNet(LightningModule):
         loss = self.MOSLoss.compute_loss(out, past_labels)
         return loss
 
-    def forward(self, past_point_clouds: dict):
-        out = self.model(past_point_clouds)
+    def forward(self, past_point_clouds: dict,past_flows):
+        out = self.model(past_point_clouds,past_flows)
         return out
 
     def training_step(self, batch: tuple, batch_idx, dataloader_index=0):
-        _, past_point_clouds, past_labels = batch
+        _, past_point_clouds, past_labels,past_flows = batch
 
-        out = self.forward(past_point_clouds)
+        out = self.forward(past_point_clouds,past_flows)
 
         loss = self.getLoss(out, past_labels)
         self.log("train_loss", loss.item(), on_step=True)
@@ -96,9 +96,9 @@ class MOSNet(LightningModule):
 
     def validation_step(self, batch: tuple, batch_idx):
         batch_size = len(batch[0])
-        meta, past_point_clouds, past_labels = batch
+        meta, past_point_clouds, past_labels,past_flows = batch
 
-        out = self.forward(past_point_clouds)
+        out = self.forward(past_point_clouds,past_flows)
 
         loss = self.getLoss(out, past_labels)
         self.log(
@@ -128,8 +128,8 @@ class MOSNet(LightningModule):
 
     def predict_step(self, batch: tuple, batch_idx: int, dataloader_idx: int = None):
         # torch.set_grad_enabled(True)
-        meta, past_point_clouds, past_labels = batch
-        out = self.forward(past_point_clouds)
+        meta, past_point_clouds, past_labels,past_flows = batch
+        out = self.forward(past_point_clouds,past_flows)
 
         for b in range(len(batch[0])):
             seq, idx, past_indices = meta[b]
@@ -203,19 +203,32 @@ class MOSModel(nn.Module):
         self.dt_prediction = cfg["MODEL"]["DELTA_T_PREDICTION"]
         ds = cfg["DATA"]["VOXEL_SIZE"]
         self.quantization = torch.Tensor([ds, ds, ds, self.dt_prediction])
-        self.MinkUNet = CustomMinkUNet(in_channels=1, out_channels=n_classes, D=4)
+        self.use_flow=cfg["DATA"]["USE_FLOW"]
 
-    def forward(self, past_point_clouds):
+        if self.use_flow:
+            in_channel=3
+        else:
+            in_channel=1
+        print('in_channel',in_channel)
+        self.MinkUNet = CustomMinkUNet(in_channels=in_channel, out_channels=n_classes, D=4)
+
+
+    def forward(self, past_point_clouds,past_flows):
         device = past_point_clouds[0].device
         quantization = self.quantization.to(device)
 
         past_point_clouds = [
             torch.div(point_cloud, quantization) for point_cloud in past_point_clouds
         ]
-        features = [
-            0.5 * torch.ones(len(point_cloud), 1).type_as(point_cloud)
-            for point_cloud in past_point_clouds
-        ]
+        if self.use_flow:
+            features=[flow.type_as(past_point_clouds[0]) for flow in past_flows]
+        else:
+            features = [
+                0.5 * torch.ones(len(point_cloud), 1).type_as(point_cloud)
+                for point_cloud in past_point_clouds
+            ]
+        
+
         coords, features = ME.utils.sparse_collate(past_point_clouds, features)
         tensor_field = ME.TensorField(
             features=features, coordinates=coords.to(features.device)
