@@ -135,6 +135,9 @@ class KittiSequentialDataset(Dataset):
 
         # Semantic information
         self.use_flow=self.cfg["DATA"]["USE_FLOW"]
+        self.dirname_flow=self.cfg["DATA"]["FLOW_DIR_NAME"]
+        print("Use flow:",self.use_flow)
+        print("Flow dirname:",self.dirname_flow)
 
         self.semantic_config = yaml.safe_load(open(cfg["DATA"]["SEMANTIC_CONFIG_FILE"]))
 
@@ -248,8 +251,7 @@ class KittiSequentialDataset(Dataset):
             )
         # todo load past flow
         if self.use_flow:
-            # print('use_flow',self.use_flow)
-            flow_files=[os.path.join(self.root_dir,str(seq).zfill(2),'motionflow_ego_motion_1',str(i).zfill(6)+".flow.npy") for i in past_indices]
+            flow_files=[os.path.join(self.root_dir,str(seq).zfill(2),self.dirname_flow,str(i).zfill(6)+".flow.npy") for i in past_indices]
             list_past_flows=[self.read_flows(f) for f in flow_files]
             past_flows=torch.cat(list_past_flows,dim=0)
         else:
