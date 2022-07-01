@@ -18,7 +18,6 @@ from mos4d.models.MinkowskiEngine.customminkunet import CustomMinkUNet
 from mos4d.models.loss import MOSLoss
 from mos4d.models.metrics import ClassificationMetrics
 
-
 class MOSNet(LightningModule):
     def __init__(self, hparams: dict):
         super().__init__()
@@ -67,7 +66,8 @@ class MOSNet(LightningModule):
         out = self.forward(past_point_clouds,past_flows)
 
         loss = self.getLoss(out, past_labels)
-        self.log("train_loss", loss.item(), on_step=True)
+        self.log("train_loss", loss.item(), on_step=True,on_epoch=True,sync_dist=True)
+        # self.log("train_loss", loss.item(), on_step=True,on_epoch=True,sync_dist=True)
 
         # Logging metrics
         dict_confusion_matrix = {}
@@ -90,7 +90,11 @@ class MOSNet(LightningModule):
                     dict_confusion_matrix[s]
                 )
             iou = self.ClassificationMetrics.getIoU(agg_confusion_matrix)
-            self.log("train_moving_iou_step{}".format(s), iou[2].item())
+            # if self.trainer.is_global_zero:
+            #     self.log("val_moving_iou_step{}".format(s), iou[2].item(),rank_zero_only=True)
+            # else:
+            #     self.log("val_moving_iou_step{}".format(s), iou[2].item())
+            self.log("val_moving_iou_step{}".format(s), iou[2].item(),rank_zero_only=True)
 
         torch.cuda.empty_cache()
 
@@ -101,9 +105,8 @@ class MOSNet(LightningModule):
         out = self.forward(past_point_clouds,past_flows)
 
         loss = self.getLoss(out, past_labels)
-        self.log(
-            "val_loss", loss.item(), batch_size=batch_size, prog_bar=True, on_epoch=True
-        )
+        self.log("val_loss", loss.item(), batch_size=batch_size, prog_bar=True, on_epoch=True,sync_dist=True)
+        # self.log("val_loss", loss.item(), batch_size=batch_size, prog_bar=True, on_epoch=True,sync_dist=True)
 
         dict_confusion_matrix = {}
         for s in range(self.n_past_steps):
@@ -122,7 +125,13 @@ class MOSNet(LightningModule):
                     dict_confusion_matrix[s]
                 )
             iou = self.ClassificationMetrics.getIoU(agg_confusion_matrix)
-            self.log("val_moving_iou_step{}".format(s), iou[2].item())
+
+            # if self.trainer.is_global_zero:
+            #     self.log("val_moving_iou_step{}".format(s), iou[2].item(),rank_zero_only=True)
+            # else:
+            #     self.log("val_moving_iou_step{}".format(s), iou[2].item())
+            self.log("val_moving_iou_step{}".format(s), iou[2].item(),rank_zero_only=True)
+            
 
         torch.cuda.empty_cache()
 
@@ -214,30 +223,39 @@ class MOSModel(nn.Module):
 
 
     def forward(self, past_point_clouds,past_flows):
-        device = past_point_clouds[0].device
-        quantization = self.quantization.to(device)
-
-        past_point_clouds = [
-            torch.div(point_cloud, quantization) for point_cloud in past_point_clouds
-        ]
-        if self.use_flow:
-            features=[flow.type_as(past_point_clouds[0]) for flow in past_flows]
+        if os.environ.get("SWITCH")=='debug':
+            predicted_sparse_tensor = self.MinkUNet(past_point_clouds)
+            out = predicted_sparse_tensor.slice(past_flows)
+            device=out.device
+            quantization = self.quantization
+            out.coordinates[:, 1:] = torch.mul(out.coordinates[:, 1:], quantization)
+            return out
         else:
-            features = [
-                0.5 * torch.ones(len(point_cloud), 1).type_as(point_cloud)
-                for point_cloud in past_point_clouds
+            device = past_point_clouds[0].device
+            quantization = self.quantization.to(device)
+
+
+            past_point_clouds = [
+                torch.div(point_cloud, quantization) for point_cloud in past_point_clouds
             ]
-        
+            if self.use_flow:
+                features=[flow.type_as(past_point_clouds[0]) for flow in past_flows]
+            else:
+                features = [
+                    0.5 * torch.ones(len(point_cloud), 1).type_as(point_cloud)
+                    for point_cloud in past_point_clouds
+                ]
+            
 
-        coords, features = ME.utils.sparse_collate(past_point_clouds, features)
-        tensor_field = ME.TensorField(
-            features=features, coordinates=coords.to(features.device)
-        )
+            coords, features = ME.utils.sparse_collate(past_point_clouds, features)
+            tensor_field = ME.TensorField(
+                features=features, coordinates=coords.to(features.device)
+            )
 
-        sparse_tensor = tensor_field.sparse()
+            sparse_tensor = tensor_field.sparse()
 
-        predicted_sparse_tensor = self.MinkUNet(sparse_tensor)
+            predicted_sparse_tensor = self.MinkUNet(sparse_tensor)
 
-        out = predicted_sparse_tensor.slice(tensor_field)
-        out.coordinates[:, 1:] = torch.mul(out.coordinates[:, 1:], quantization)
-        return out
+            out = predicted_sparse_tensor.slice(tensor_field)
+            out.coordinates[:, 1:] = torch.mul(out.coordinates[:, 1:], quantization)
+            return out

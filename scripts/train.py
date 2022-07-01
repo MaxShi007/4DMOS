@@ -15,6 +15,7 @@ import sys
 sys.path.append("src") 
 import mos4d.datasets.datasets as datasets
 import mos4d.models.models as models
+from pytorch_lightning.strategies import DDPStrategy
 
 
 @click.command()
@@ -79,6 +80,8 @@ def main(config, weights, checkpoint):
         max_epochs=cfg["TRAIN"]["MAX_EPOCH"],
         accumulate_grad_batches=cfg["TRAIN"]["ACC_BATCHES"],
         callbacks=[lr_monitor, checkpoint_saver],
+        accelerator="gpu",
+        strategy=DDPStrategy(find_unused_parameters=False)
     )
 
     # Train!
@@ -86,6 +89,7 @@ def main(config, weights, checkpoint):
 
 
 if __name__ == "__main__":
-    os.environ['CUDA_VISIBLE_DEVICES']='3'
+    os.environ['SWITCH']='run' # run debug
+    os.environ['CUDA_VISIBLE_DEVICES']='2,3'
     os.environ['DATA']='/share/sgb/semantic_kitti/dataset/sequences'
     main()

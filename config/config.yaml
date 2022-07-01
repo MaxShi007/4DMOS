@@ -3,7 +3,7 @@ EXPERIMENT:
 
 ##Data
 DATA:
-  USE_FLOW: False # True
+  USE_FLOW: False # True False
   TRANSFORM: True # If true, the points are pose-aligned before feeding to the model
   POSES: "poses.txt" # Name of the pose file provided in each sequence folder
   SHUFFLE: True
@@ -13,40 +13,40 @@ DATA:
   SEMANTIC_CONFIG_FILE: "./config/semantic-kitti-mos.yaml" 
   SPLIT:
     TRAIN:
-      # - 0
-      # - 1
-      # - 2
+      - 0
+      - 1
+      - 2
       - 3
-      # - 4
-      # - 5
-      # - 6
-      # - 7
-      # - 9
-      # - 10
+      - 4
+      - 5
+      - 6
+      - 7
+      - 9
+      - 10
     VAL:
       - 8
     TEST:
       - 11
-      # - 12
-      # - 13
-      # - 14
-      # - 15
-      # - 16
-      # - 17
-      # - 18
-      # - 19
-      # - 20
-      # - 21
+      - 12
+      - 13
+      - 14
+      - 15
+      - 16
+      - 17
+      - 18
+      - 19
+      - 20
+      - 21
  
 ##Training
 TRAIN:
-  N_GPUS: 1
-  MAX_EPOCH: 2
+  N_GPUS: 2
+  MAX_EPOCH: 60
   LR: 0.0001
   LR_EPOCH: 1
   LR_DECAY: 0.99
   WEIGHT_DECAY: 0.0001
-  BATCH_SIZE: 8 # 14 single gpu
+  BATCH_SIZE: 6 # 14 single gpu
   ACC_BATCHES: 1
   AUGMENTATION: True
 
