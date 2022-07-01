@@ -89,7 +89,11 @@ def main(config, weights, checkpoint):
 
 
 if __name__ == "__main__":
+<<<<<<< HEAD
     os.environ['SWITCH']='run' # run debug
     os.environ['CUDA_VISIBLE_DEVICES']='2,3'
+=======
+    os.environ['CUDA_VISIBLE_DEVICES']='0'
+>>>>>>> cd20f1629b1944b4e77cbce6e28f375382246610
     os.environ['DATA']='/share/sgb/semantic_kitti/dataset/sequences'
     main()

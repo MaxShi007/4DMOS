@@ -1,13 +1,18 @@
 EXPERIMENT:
-  ID: YourID # Give your logs and model a unique name
+  ID: gt_flow_singlegpu # Give your logs and model a unique name
 
 ##Data
 DATA:
+<<<<<<< HEAD
   USE_FLOW: False # True False
+=======
+  USE_FLOW: True # True False
+  FLOW_DIR_NAME: "motionflow_ego_motion_1"
+>>>>>>> cd20f1629b1944b4e77cbce6e28f375382246610
   TRANSFORM: True # If true, the points are pose-aligned before feeding to the model
   POSES: "poses.txt" # Name of the pose file provided in each sequence folder
   SHUFFLE: True
-  NUM_WORKER: 4
+  NUM_WORKER: 8
   DELTA_T_DATA: 0.1 # Time between scans in the dataset (0.1s for KITTI)
   VOXEL_SIZE: 0.1 # Used for discretization in x,y,z when creating a sparse tensor 
   SEMANTIC_CONFIG_FILE: "./config/semantic-kitti-mos.yaml" 
@@ -40,13 +45,21 @@ DATA:
  
 ##Training
 TRAIN:
+<<<<<<< HEAD
   N_GPUS: 2
+=======
+  N_GPUS: 1
+>>>>>>> cd20f1629b1944b4e77cbce6e28f375382246610
   MAX_EPOCH: 60
   LR: 0.0001
   LR_EPOCH: 1
   LR_DECAY: 0.99
   WEIGHT_DECAY: 0.0001
+<<<<<<< HEAD
   BATCH_SIZE: 6 # 14 single gpu
+=======
+  BATCH_SIZE: 6 # 6 single gpu 
+>>>>>>> cd20f1629b1944b4e77cbce6e28f375382246610
   ACC_BATCHES: 1
   AUGMENTATION: True
 
