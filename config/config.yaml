@@ -3,12 +3,8 @@ EXPERIMENT:
 
 ##Data
 DATA:
-<<<<<<< HEAD
-  USE_FLOW: False # True False
-=======
   USE_FLOW: True # True False
   FLOW_DIR_NAME: "motionflow_ego_motion_1"
->>>>>>> cd20f1629b1944b4e77cbce6e28f375382246610
   TRANSFORM: True # If true, the points are pose-aligned before feeding to the model
   POSES: "poses.txt" # Name of the pose file provided in each sequence folder
   SHUFFLE: True
@@ -45,21 +41,13 @@ DATA:
  
 ##Training
 TRAIN:
-<<<<<<< HEAD
   N_GPUS: 2
-=======
-  N_GPUS: 1
->>>>>>> cd20f1629b1944b4e77cbce6e28f375382246610
   MAX_EPOCH: 60
   LR: 0.0001
   LR_EPOCH: 1
   LR_DECAY: 0.99
   WEIGHT_DECAY: 0.0001
-<<<<<<< HEAD
   BATCH_SIZE: 6 # 14 single gpu
-=======
-  BATCH_SIZE: 6 # 6 single gpu 
->>>>>>> cd20f1629b1944b4e77cbce6e28f375382246610
   ACC_BATCHES: 1
   AUGMENTATION: True
 
