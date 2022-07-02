@@ -12,6 +12,7 @@ from torch.utils.data import Dataset, DataLoader
 from pytorch_lightning import LightningDataModule
 import MinkowskiEngine as ME
 
+
 from mos4d.datasets.utils import load_poses, load_calib, load_files
 from mos4d.datasets.augmentation import (
     shift_point_cloud,
@@ -106,35 +107,28 @@ class KittiSequentialModule(LightningDataModule):
 
     @staticmethod
     def collate_fn(batch):
-        if os.environ.get("SWITCH")=='debug':
-            meta = [item[0] for item in batch]
-            past_point_clouds = [item[1] for item in batch]
-            past_labels = [item[2] for item in batch]
-            past_flows=[item[3] for item in batch]
-            # print('222222')
-            # coords=[]
-            # feats=[]
-            # for i in range(len(batch)):
-            #     coord,feat=ME.utils.sparse_quantize(past_point_clouds[i],past_flows[i],quantization_size=0.1)
-            #     coords.append(coord)
-            #     feats.append(feat)
-            # coords_batch,feat_batch=ME.utils.sparse_collate(coords,feats)
-            # # coords,feats=ME.utils.sparse_quantize(past_point_clouds,past_flows,quantization_size=0.1)
-            # print('1111111')
-            quantization=torch.Tensor([0.1, 0.1, 0.1, 0.1])
-            past_point_clouds = [torch.div(point_cloud, quantization) for point_cloud in past_point_clouds]
-            features=[flow.type_as(past_point_clouds[0]) for flow in past_flows]
-            coords1, features1 = ME.utils.sparse_collate(past_point_clouds, features)
-            tensor_field = ME.TensorField(features=features1, coordinates=coords1)
-            sparse_tensor = tensor_field.sparse()
-            print(past_point_clouds,features)
-            return [meta,sparse_tensor,past_labels,tensor_field]
-        else:
-            meta = [item[0] for item in batch]
-            past_point_clouds = [item[1] for item in batch]
-            past_labels = [item[2] for item in batch]
-            past_flows=[item[3] for item in batch]
-            return [meta, past_point_clouds, past_labels,past_flows]
+        # if os.environ.get("SWITCH")=='debug':
+        #     meta = [item[0] for item in batch]
+        #     past_point_clouds = [item[1] for item in batch]
+        #     past_labels = [item[2] for item in batch]
+        #     past_flows=[item[3] for item in batch]
+
+        #     quantization=torch.Tensor([0.1, 0.1, 0.1, 0.1])
+
+        #     past_point_clouds = [torch.div(point_cloud, quantization) for point_cloud in past_point_clouds]
+        #     features=[flow.type_as(past_point_clouds[0]) for flow in past_flows]
+
+        #     coords1, features1 = ME.utils.sparse_collate(past_point_clouds, features)
+        #     # tensor_field = ME.TensorField(features=features1, coordinates=coords1)
+        #     # sparse_tensor = tensor_field.sparse()
+        #     # print(past_point_clouds,features)
+        #     return [meta,coords1,past_labels,features1]
+        # else:
+        meta = [item[0] for item in batch]
+        past_point_clouds = [item[1] for item in batch]
+        past_labels = [item[2] for item in batch]
+        past_flows=[item[3] for item in batch]
+        return [meta, past_point_clouds, past_labels,past_flows]
 
 
 class KittiSequentialDataset(Dataset):
@@ -159,10 +153,11 @@ class KittiSequentialDataset(Dataset):
         self.filename_poses = cfg["DATA"]["POSES"]
 
         # Semantic information
-        self.use_flow=self.cfg["DATA"]["USE_FLOW"]
-        self.dirname_flow=self.cfg["DATA"]["FLOW_DIR_NAME"]
-        print("Use flow:",self.use_flow)
-        print("Flow dirname:",self.dirname_flow)
+        self.use_flow=self.cfg["DATA"]["FLOW"]["USE_FLOW"]
+        self.dirname_flow=self.cfg["DATA"]["FLOW"]["FLOW_DIR_NAME"]
+        if self.use_flow:
+            print("Use flow:",self.use_flow)
+            print("Flow dirname:",self.dirname_flow)
 
         self.semantic_config = yaml.safe_load(open(cfg["DATA"]["SEMANTIC_CONFIG_FILE"]))
 

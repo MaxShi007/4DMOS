@@ -61,13 +61,16 @@ class MOSNet(LightningModule):
         return out
 
     def training_step(self, batch: tuple, batch_idx, dataloader_index=0):
+        # if os.environ["SWITCH"]=="debug":
+        #     pass
+        # else:
+        batch_size=len(batch[0])
         _, past_point_clouds, past_labels,past_flows = batch
 
         out = self.forward(past_point_clouds,past_flows)
 
         loss = self.getLoss(out, past_labels)
-        self.log("train_loss", loss.item(), on_step=True,on_epoch=True,sync_dist=True)
-        # self.log("train_loss", loss.item(), on_step=True,on_epoch=True,sync_dist=True)
+        self.log("train_loss", loss.item(), on_step=True,on_epoch=True,sync_dist=True,batch_size=batch_size)
 
         # Logging metrics
         dict_confusion_matrix = {}
@@ -90,10 +93,6 @@ class MOSNet(LightningModule):
                     dict_confusion_matrix[s]
                 )
             iou = self.ClassificationMetrics.getIoU(agg_confusion_matrix)
-            # if self.trainer.is_global_zero:
-            #     self.log("val_moving_iou_step{}".format(s), iou[2].item(),rank_zero_only=True)
-            # else:
-            #     self.log("val_moving_iou_step{}".format(s), iou[2].item())
             self.log("val_moving_iou_step{}".format(s), iou[2].item(),rank_zero_only=True)
 
         torch.cuda.empty_cache()
@@ -212,7 +211,7 @@ class MOSModel(nn.Module):
         self.dt_prediction = cfg["MODEL"]["DELTA_T_PREDICTION"]
         ds = cfg["DATA"]["VOXEL_SIZE"]
         self.quantization = torch.Tensor([ds, ds, ds, self.dt_prediction])
-        self.use_flow=cfg["DATA"]["USE_FLOW"]
+        self.use_flow=cfg["DATA"]["FLOW"]["USE_FLOW"]
 
         if self.use_flow:
             in_channel=3
@@ -223,39 +222,41 @@ class MOSModel(nn.Module):
 
 
     def forward(self, past_point_clouds,past_flows):
-        if os.environ.get("SWITCH")=='debug':
-            predicted_sparse_tensor = self.MinkUNet(past_point_clouds)
-            out = predicted_sparse_tensor.slice(past_flows)
-            device=out.device
-            quantization = self.quantization
-            out.coordinates[:, 1:] = torch.mul(out.coordinates[:, 1:], quantization)
-            return out
+        # if os.environ.get("SWITCH")=='debug':
+        #     tensor_field=ME.TensorField(features=past_flows, coordinates=past_point_clouds)
+        #     sparse_tensor=tensor_field.sparse()
+        #     predicted_sparse_tensor = self.MinkUNet(sparse_tensor)
+        #     out = predicted_sparse_tensor.slice(tensor_field)
+        #     device=out.device
+        #     quantization = self.quantization.to(device)
+        #     out.coordinates[:, 1:] = torch.mul(out.coordinates[:, 1:], quantization)
+        #     return out
+        # else:
+        device = past_point_clouds[0].device
+        quantization = self.quantization.to(device)
+
+
+        past_point_clouds = [
+            torch.div(point_cloud, quantization) for point_cloud in past_point_clouds
+        ]
+        if self.use_flow:
+            features=[flow.type_as(past_point_clouds[0]) for flow in past_flows]
         else:
-            device = past_point_clouds[0].device
-            quantization = self.quantization.to(device)
-
-
-            past_point_clouds = [
-                torch.div(point_cloud, quantization) for point_cloud in past_point_clouds
+            features = [
+                0.5 * torch.ones(len(point_cloud), 1).type_as(point_cloud)
+                for point_cloud in past_point_clouds
             ]
-            if self.use_flow:
-                features=[flow.type_as(past_point_clouds[0]) for flow in past_flows]
-            else:
-                features = [
-                    0.5 * torch.ones(len(point_cloud), 1).type_as(point_cloud)
-                    for point_cloud in past_point_clouds
-                ]
-            
+        
 
-            coords, features = ME.utils.sparse_collate(past_point_clouds, features)
-            tensor_field = ME.TensorField(
-                features=features, coordinates=coords.to(features.device)
-            )
+        coords, features = ME.utils.sparse_collate(past_point_clouds, features)
+        tensor_field = ME.TensorField(
+            features=features, coordinates=coords.to(features.device)
+        )
 
-            sparse_tensor = tensor_field.sparse()
+        sparse_tensor = tensor_field.sparse()
 
-            predicted_sparse_tensor = self.MinkUNet(sparse_tensor)
+        predicted_sparse_tensor = self.MinkUNet(sparse_tensor)
 
-            out = predicted_sparse_tensor.slice(tensor_field)
-            out.coordinates[:, 1:] = torch.mul(out.coordinates[:, 1:], quantization)
-            return out
+        out = predicted_sparse_tensor.slice(tensor_field)
+        out.coordinates[:, 1:] = torch.mul(out.coordinates[:, 1:], quantization)
+        return out
