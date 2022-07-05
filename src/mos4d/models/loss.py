@@ -33,6 +33,6 @@ class MOSLoss(nn.Module):
 
         # Prepare ground truth labels
         gt_labels = torch.cat(past_labels, dim=0)[:, 0]
-
+        # gt_labels = gt_labels.long()
         loss = self.loss(log_softmax, gt_labels)
         return loss
