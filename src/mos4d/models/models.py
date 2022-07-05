@@ -211,7 +211,11 @@ class MOSModel(nn.Module):
         self.dt_prediction = cfg["MODEL"]["DELTA_T_PREDICTION"]
         ds = cfg["DATA"]["VOXEL_SIZE"]
         self.quantization = torch.Tensor([ds, ds, ds, self.dt_prediction])
+        #!
         self.use_flow=cfg["DATA"]["FLOW"]["USE_FLOW"]
+        
+        # self.use_flow=False
+        #!
 
         if self.use_flow:
             in_channel=3

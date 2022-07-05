@@ -8,8 +8,11 @@ from pytorch_lightning import Trainer
 import torch
 import torch.nn.functional as F
 
+import sys
+sys.path.append("src") 
 import mos4d.datasets.datasets as datasets
 import mos4d.models.models as models
+import os
 
 
 @click.command()
@@ -57,13 +60,15 @@ def main(weights, sequence, dt, poses, transform):
         if not transform:
             cfg["DATA"]["POSES"] = "no_poses"
 
+    #! seq以参数的形式传入，不走config
     if sequence:
         cfg["DATA"]["SPLIT"]["TEST"] = list(sequence)
 
     if dt:
         cfg["MODEL"]["DELTA_T_PREDICTION"] = dt
 
-    cfg["TRAIN"]["BATCH_SIZE"] = 1
+    #! 自己设置推理的batch_size，不走config
+    cfg["TRAIN"]["BATCH_SIZE"] = 4
 
     # Load data and model
     cfg["DATA"]["SPLIT"]["TRAIN"] = cfg["DATA"]["SPLIT"]["TEST"]
@@ -80,5 +85,9 @@ def main(weights, sequence, dt, poses, transform):
     trainer.predict(model, data.test_dataloader())
 
 
+
 if __name__ == "__main__":
+    os.environ['SWITCH']='run' # run debug
+    os.environ['CUDA_VISIBLE_DEVICES']='3'
+    os.environ['DATA']='/share/sgb/semantic_kitti/dataset/sequences'
     main()

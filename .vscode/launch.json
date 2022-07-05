@@ -5,6 +5,39 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "confidences_to_labels.py",
+            "type": "python",
+            "request": "launch",
+            "program": "scripts/confidences_to_labels.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "-p",
+                "/root/4DMOS/predictions/10_scans/poses",
+                "-s",
+                // "non-overlapping",
+                "bayes",
+                "-prior",
+                "0.25",
+                "-seq",
+                "08"
+            ]
+        },
+        {
+            "name": "predict_confidences.py",
+            "type": "python",
+            "request": "launch",
+            "program": "scripts/predict_confidences.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "-w",
+                "/root/4DMOS/10_scans.ckpt",
+                "-seq",
+                "08"
+            ]
+        },
+        {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",

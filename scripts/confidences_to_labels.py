@@ -9,6 +9,9 @@ import yaml
 import copy
 from tqdm import tqdm
 import numpy as np
+
+import sys
+sys.path.append("src") 
 from mos4d.datasets.utils import load_files
 
 
@@ -117,7 +120,8 @@ def main(path, strategy, sequence, prior, dt):
 
 
 def verify_predictions(seq, pred_path, semantic_config):
-    path_to_seq = os.path.join("/data", str(seq).zfill(2))
+    data_root=os.environ.get("DATA")
+    path_to_seq = os.path.join(data_root, str(seq).zfill(2))
     scan_path = os.path.join(path_to_seq, "velodyne")
     filenames = load_files(scan_path)
 
@@ -166,4 +170,7 @@ def log_odds_to_prob(log_odds):
 
 
 if __name__ == "__main__":
+    os.environ['SWITCH']='run' # run debug
+    os.environ['CUDA_VISIBLE_DEVICES']='3'
+    os.environ['DATA']='/share/sgb/semantic_kitti/dataset/sequences'
     main()
