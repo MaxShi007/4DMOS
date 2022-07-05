@@ -13,7 +13,7 @@
             "justMyCode": true,
             "args": [
                 "-p",
-                "/root/4DMOS/predictions/10_scans/poses",
+                "/root/4DMOS/predictions/gt_flow_multipgpu/poses",
                 "-s",
                 // "non-overlapping",
                 "bayes",
@@ -32,9 +32,11 @@
             "justMyCode": true,
             "args": [
                 "-w",
-                "/root/4DMOS/10_scans.ckpt",
+                "/share/sgb/4DMOS/logs/gt_flow_multipgpu/version_0/checkpoints/gt_flow_multipgpu_epoch=053_val_moving_iou_step0=0.914.ckpt",
                 "-seq",
-                "08"
+                "08",
+                "-poses",
+                "08.txt"
             ]
         },
         {
