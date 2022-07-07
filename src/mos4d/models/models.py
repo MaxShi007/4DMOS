@@ -18,15 +18,13 @@ from mos4d.models.MinkowskiEngine.customminkunet import CustomMinkUNet
 from mos4d.models.loss import MOSLoss
 from mos4d.models.metrics import ClassificationMetrics
 
+
 class MOSNet(LightningModule):
+
     def __init__(self, hparams: dict):
         super().__init__()
         self.save_hyperparameters(hparams)
-        self.poses = (
-            self.hparams["DATA"]["POSES"].split(".")[0]
-            if self.hparams["DATA"]["TRANSFORM"]
-            else "no_poses"
-        )
+        self.poses = (self.hparams["DATA"]["POSES"].split(".")[0] if self.hparams["DATA"]["TRANSFORM"] else "no_poses")
         self.id = self.hparams["EXPERIMENT"]["ID"]
         self.dt_prediction = self.hparams["MODEL"]["DELTA_T_PREDICTION"]
         self.lr = self.hparams["TRAIN"]["LR"]
@@ -35,83 +33,67 @@ class MOSNet(LightningModule):
         self.weight_decay = hparams["TRAIN"]["WEIGHT_DECAY"]
         self.n_past_steps = hparams["MODEL"]["N_PAST_STEPS"]
 
-        self.semantic_config = yaml.safe_load(
-            open(hparams["DATA"]["SEMANTIC_CONFIG_FILE"])
-        )
+        self.semantic_config = yaml.safe_load(open(hparams["DATA"]["SEMANTIC_CONFIG_FILE"]))
         self.n_classes = len(self.semantic_config["learning_map_inv"])
-        self.ignore_index = [
-            key
-            for key, ignore in self.semantic_config["learning_ignore"].items()
-            if ignore
-        ]
+        self.ignore_index = [key for key, ignore in self.semantic_config["learning_ignore"].items() if ignore]
         self.model = MOSModel(hparams, self.n_classes)
 
         self.MOSLoss = MOSLoss(self.n_classes, self.ignore_index)
 
-        self.ClassificationMetrics = ClassificationMetrics(
-            self.n_classes, self.ignore_index
-        )
+        self.ClassificationMetrics = ClassificationMetrics(self.n_classes, self.ignore_index)
 
     def getLoss(self, out: ME.TensorField, past_labels: list):
         loss = self.MOSLoss.compute_loss(out, past_labels)
         return loss
 
-    def forward(self, past_point_clouds: dict,past_flows):
-        out = self.model(past_point_clouds,past_flows)
+    def forward(self, past_point_clouds: dict, past_flows):
+        out = self.model(past_point_clouds, past_flows)
         return out
 
     def training_step(self, batch: tuple, batch_idx, dataloader_index=0):
         # if os.environ["SWITCH"]=="debug":
         #     pass
         # else:
-        batch_size=len(batch[0])
-        _, past_point_clouds, past_labels,past_flows = batch
+        batch_size = len(batch[0])
+        _, past_point_clouds, past_labels, past_flows = batch
 
-        out = self.forward(past_point_clouds,past_flows)
+        out = self.forward(past_point_clouds, past_flows)
 
         loss = self.getLoss(out, past_labels)
-        self.log("train_loss", loss.item(), on_step=True,on_epoch=True,sync_dist=True,batch_size=batch_size)
+        self.log("train_loss", loss.item(), on_step=True, on_epoch=True, sync_dist=True, batch_size=batch_size)
 
         # Logging metrics
         dict_confusion_matrix = {}
         for s in range(self.n_past_steps):
-            dict_confusion_matrix[s] = (
-                self.get_step_confusion_matrix(out, past_labels, s).detach().cpu()
-            )
+            dict_confusion_matrix[s] = (self.get_step_confusion_matrix(out, past_labels, s).detach().cpu())
 
         torch.cuda.empty_cache()
         return {"loss": loss, "dict_confusion_matrix": dict_confusion_matrix}
 
     def training_epoch_end(self, training_step_outputs):
-        list_dict_confusion_matrix = [
-            output["dict_confusion_matrix"] for output in training_step_outputs
-        ]
+        list_dict_confusion_matrix = [output["dict_confusion_matrix"] for output in training_step_outputs]
         for s in range(self.n_past_steps):
             agg_confusion_matrix = torch.zeros(self.n_classes, self.n_classes)
             for dict_confusion_matrix in list_dict_confusion_matrix:
-                agg_confusion_matrix = agg_confusion_matrix.add(
-                    dict_confusion_matrix[s]
-                )
+                agg_confusion_matrix = agg_confusion_matrix.add(dict_confusion_matrix[s])
             iou = self.ClassificationMetrics.getIoU(agg_confusion_matrix)
-            self.log("val_moving_iou_step{}".format(s), iou[2].item(),rank_zero_only=True)
+            self.log("val_moving_iou_step{}".format(s), iou[2].item(), rank_zero_only=True)
 
         torch.cuda.empty_cache()
 
     def validation_step(self, batch: tuple, batch_idx):
         batch_size = len(batch[0])
-        meta, past_point_clouds, past_labels,past_flows = batch
+        meta, past_point_clouds, past_labels, past_flows = batch
 
-        out = self.forward(past_point_clouds,past_flows)
+        out = self.forward(past_point_clouds, past_flows)
 
         loss = self.getLoss(out, past_labels)
-        self.log("val_loss", loss.item(), batch_size=batch_size, prog_bar=True, on_epoch=True,sync_dist=True)
+        self.log("val_loss", loss.item(), batch_size=batch_size, prog_bar=True, on_epoch=True, sync_dist=True)
         # self.log("val_loss", loss.item(), batch_size=batch_size, prog_bar=True, on_epoch=True,sync_dist=True)
 
         dict_confusion_matrix = {}
         for s in range(self.n_past_steps):
-            dict_confusion_matrix[s] = (
-                self.get_step_confusion_matrix(out, past_labels, s).detach().cpu()
-            )
+            dict_confusion_matrix[s] = (self.get_step_confusion_matrix(out, past_labels, s).detach().cpu())
 
         torch.cuda.empty_cache()
         return dict_confusion_matrix
@@ -120,24 +102,21 @@ class MOSNet(LightningModule):
         for s in range(self.n_past_steps):
             agg_confusion_matrix = torch.zeros(self.n_classes, self.n_classes)
             for dict_confusion_matrix in validation_step_outputs:
-                agg_confusion_matrix = agg_confusion_matrix.add(
-                    dict_confusion_matrix[s]
-                )
+                agg_confusion_matrix = agg_confusion_matrix.add(dict_confusion_matrix[s])
             iou = self.ClassificationMetrics.getIoU(agg_confusion_matrix)
 
             # if self.trainer.is_global_zero:
             #     self.log("val_moving_iou_step{}".format(s), iou[2].item(),rank_zero_only=True)
             # else:
             #     self.log("val_moving_iou_step{}".format(s), iou[2].item())
-            self.log("val_moving_iou_step{}".format(s), iou[2].item(),rank_zero_only=True)
-            
+            self.log("val_moving_iou_step{}".format(s), iou[2].item(), rank_zero_only=True)
 
         torch.cuda.empty_cache()
 
     def predict_step(self, batch: tuple, batch_idx: int, dataloader_idx: int = None):
         # torch.set_grad_enabled(True)
-        meta, past_point_clouds, past_labels,past_flows = batch
-        out = self.forward(past_point_clouds,past_flows)
+        meta, past_point_clouds, past_labels, past_flows = batch
+        out = self.forward(past_point_clouds, past_flows)
 
         for b in range(len(batch[0])):
             seq, idx, past_indices = meta[b]
@@ -170,9 +149,7 @@ class MOSNet(LightningModule):
 
                 file_name = os.path.join(
                     path,
-                    str(past_indices[-step - 1]).zfill(6)
-                    + "_dt_{:.0e}".format(self.dt_prediction)
-                    + ".npy",
+                    str(past_indices[-step - 1]).zfill(6) + "_dt_{:.0e}".format(self.dt_prediction) + ".npy",
                 )
 
                 np.save(file_name, moving_confidence)
@@ -185,18 +162,12 @@ class MOSNet(LightningModule):
         pred_logits = out.features[mask].detach().cpu()
         gt_labels = torch.cat(past_labels, dim=0).detach().cpu()
         gt_labels = gt_labels[mask][:, 0]
-        confusion_matrix = self.ClassificationMetrics.compute_confusion_matrix(
-            pred_logits, gt_labels
-        )
+        confusion_matrix = self.ClassificationMetrics.compute_confusion_matrix(pred_logits, gt_labels)
         return confusion_matrix
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(
-            self.parameters(), lr=self.lr, weight_decay=self.weight_decay
-        )
-        scheduler = torch.optim.lr_scheduler.StepLR(
-            optimizer, step_size=self.lr_epoch, gamma=self.lr_decay
-        )
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=self.lr_epoch, gamma=self.lr_decay)
         return [optimizer], [scheduler]
 
 
@@ -206,26 +177,26 @@ class MOSNet(LightningModule):
 
 
 class MOSModel(nn.Module):
+
     def __init__(self, cfg: dict, n_classes: int):
         super().__init__()
         self.dt_prediction = cfg["MODEL"]["DELTA_T_PREDICTION"]
         ds = cfg["DATA"]["VOXEL_SIZE"]
         self.quantization = torch.Tensor([ds, ds, ds, self.dt_prediction])
         #!
-        self.use_flow=cfg["DATA"]["FLOW"]["USE_FLOW"]
-        
-        # self.use_flow=False
+        # self.use_flow=cfg["DATA"]["FLOW"]["USE_FLOW"]
+
+        self.use_flow = False
         #!
 
         if self.use_flow:
-            in_channel=3
+            in_channel = 3
         else:
-            in_channel=1
-        print('in_channel',in_channel)
+            in_channel = 1
+        print('in_channel', in_channel)
         self.MinkUNet = CustomMinkUNet(in_channels=in_channel, out_channels=n_classes, D=4)
 
-
-    def forward(self, past_point_clouds,past_flows):
+    def forward(self, past_point_clouds, past_flows):
         # if os.environ.get("SWITCH")=='debug':
         #     tensor_field=ME.TensorField(features=past_flows, coordinates=past_point_clouds)
         #     sparse_tensor=tensor_field.sparse()
@@ -239,23 +210,14 @@ class MOSModel(nn.Module):
         device = past_point_clouds[0].device
         quantization = self.quantization.to(device)
 
-
-        past_point_clouds = [
-            torch.div(point_cloud, quantization) for point_cloud in past_point_clouds
-        ]
+        past_point_clouds = [torch.div(point_cloud, quantization) for point_cloud in past_point_clouds]
         if self.use_flow:
-            features=[flow.type_as(past_point_clouds[0]) for flow in past_flows]
+            features = [flow.type_as(past_point_clouds[0]) for flow in past_flows]
         else:
-            features = [
-                0.5 * torch.ones(len(point_cloud), 1).type_as(point_cloud)
-                for point_cloud in past_point_clouds
-            ]
-        
+            features = [0.5 * torch.ones(len(point_cloud), 1).type_as(point_cloud) for point_cloud in past_point_clouds]
 
         coords, features = ME.utils.sparse_collate(past_point_clouds, features)
-        tensor_field = ME.TensorField(
-            features=features, coordinates=coords.to(features.device)
-        )
+        tensor_field = ME.TensorField(features=features, coordinates=coords.to(features.device))
 
         sparse_tensor = tensor_field.sparse()
 

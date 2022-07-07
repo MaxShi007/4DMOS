@@ -32,11 +32,11 @@
             "justMyCode": true,
             "args": [
                 "-w",
-                "/share/sgb/4DMOS/logs/repaper_multipgpu/version_0/checkpoints/repaper_multipgpu_epoch=059_val_moving_iou_step0=0.901.ckpt",
+                "/share/sgb/4DMOS/logs/10_scans.ckpt",
                 "-seq",
                 "08",
-                "-poses",
-                "08.txt"
+                // "-poses",
+                // "08.txt"
             ]
         },
         {

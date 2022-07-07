@@ -12,7 +12,6 @@ from torch.utils.data import Dataset, DataLoader
 from pytorch_lightning import LightningDataModule
 import MinkowskiEngine as ME
 
-
 from mos4d.datasets.utils import load_poses, load_calib, load_files
 from mos4d.datasets.augmentation import (
     shift_point_cloud,
@@ -90,11 +89,7 @@ class KittiSequentialModule(LightningDataModule):
         )
         self.test_iter = iter(self.test_loader)
 
-        print(
-            "Loaded {:d} training, {:d} validation and {:d} test samples.".format(
-                len(train_set), len(val_set), (len(test_set))
-            )
-        )
+        print("Loaded {:d} training, {:d} validation and {:d} test samples.".format(len(train_set), len(val_set), (len(test_set))))
 
     def train_dataloader(self):
         return self.train_loader
@@ -127,8 +122,8 @@ class KittiSequentialModule(LightningDataModule):
         meta = [item[0] for item in batch]
         past_point_clouds = [item[1] for item in batch]
         past_labels = [item[2] for item in batch]
-        past_flows=[item[3] for item in batch]
-        return [meta, past_point_clouds, past_labels,past_flows]
+        past_flows = [item[3] for item in batch]
+        return [meta, past_point_clouds, past_labels, past_flows]
 
 
 class KittiSequentialDataset(Dataset):
@@ -154,14 +149,14 @@ class KittiSequentialDataset(Dataset):
 
         # Semantic information
         #!
-        self.use_flow=self.cfg["DATA"]["FLOW"]["USE_FLOW"]
-        self.dirname_flow=self.cfg["DATA"]["FLOW"]["FLOW_DIR_NAME"]
-        
-        # self.use_flow=False
+        # self.use_flow=self.cfg["DATA"]["FLOW"]["USE_FLOW"]
+        # self.dirname_flow=self.cfg["DATA"]["FLOW"]["FLOW_DIR_NAME"]
+
+        self.use_flow = False
         #!
         if self.use_flow:
-            print("Use flow:",self.use_flow)
-            print("Flow dirname:",self.dirname_flow)
+            print("Use flow:", self.use_flow)
+            print("Flow dirname:", self.dirname_flow)
 
         self.semantic_config = yaml.safe_load(open(cfg["DATA"]["SEMANTIC_CONFIG_FILE"]))
 
@@ -180,12 +175,8 @@ class KittiSequentialDataset(Dataset):
         # Check if data and prediction frequency matches
         self.dt_pred = self.cfg["MODEL"]["DELTA_T_PREDICTION"]
         self.dt_data = self.cfg["DATA"]["DELTA_T_DATA"]
-        assert (
-            self.dt_pred >= self.dt_data
-        ), "DELTA_T_PREDICTION needs to be larger than DELTA_T_DATA!"
-        assert np.isclose(
-            self.dt_pred / self.dt_data, round(self.dt_pred / self.dt_data), atol=1e-5
-        ), "DELTA_T_PREDICTION needs to be a multiple of DELTA_T_DATA!"
+        assert (self.dt_pred >= self.dt_data), "DELTA_T_PREDICTION needs to be larger than DELTA_T_DATA!"
+        assert np.isclose(self.dt_pred / self.dt_data, round(self.dt_pred / self.dt_data), atol=1e-5), "DELTA_T_PREDICTION needs to be a multiple of DELTA_T_DATA!"
         self.skip = round(self.dt_pred / self.dt_data)
 
         self.augment = self.cfg["TRAIN"]["AUGMENTATION"] and split == "train"
@@ -210,9 +201,7 @@ class KittiSequentialDataset(Dataset):
                 self.poses[seq] = []
 
             # Get number of sequences based on number of past steps
-            n_samples_sequence = max(
-                0, len(self.filenames[seq]) - self.skip * (self.n_past_steps - 1)
-            )
+            n_samples_sequence = max(0, len(self.filenames[seq]) - self.skip * (self.n_past_steps - 1))
 
             # Add to idx mapping
             for sample_idx in range(n_samples_sequence):
@@ -239,7 +228,7 @@ class KittiSequentialDataset(Dataset):
         from_idx = scan_idx - self.skip * (self.n_past_steps - 1)
         to_idx = scan_idx + 1
         past_indices = list(range(from_idx, to_idx, self.skip))
-        past_files = self.filenames[seq][from_idx : to_idx : self.skip]
+        past_files = self.filenames[seq][from_idx:to_idx:self.skip]
         list_past_point_clouds = [self.read_point_cloud(f) for f in past_files]
         for i, pcd in enumerate(list_past_point_clouds):
 
@@ -255,12 +244,7 @@ class KittiSequentialDataset(Dataset):
         past_point_clouds = torch.cat(list_past_point_clouds, dim=0)
 
         # Load past labels
-        label_files = [
-            os.path.join(
-                self.root_dir, str(seq).zfill(2), "labels", str(i).zfill(6) + ".label"
-            )
-            for i in past_indices
-        ]
+        label_files = [os.path.join(self.root_dir, str(seq).zfill(2), "labels", str(i).zfill(6) + ".label") for i in past_indices]
 
         list_past_labels = [self.read_labels(f) for f in label_files]
         for i, labels in enumerate(list_past_labels):
@@ -270,20 +254,17 @@ class KittiSequentialDataset(Dataset):
         past_labels = torch.cat(list_past_labels, dim=0)
 
         if self.augment:
-            past_point_clouds, past_labels = self.augment_data(
-                past_point_clouds, past_labels
-            )
+            past_point_clouds, past_labels = self.augment_data(past_point_clouds, past_labels)
         # todo load past flow
         if self.use_flow:
-            flow_files=[os.path.join(self.root_dir,str(seq).zfill(2),self.dirname_flow,str(i).zfill(6)+".flow.npy") for i in past_indices]
-            list_past_flows=[self.read_flows(f) for f in flow_files]
-            past_flows=torch.cat(list_past_flows,dim=0)
+            flow_files = [os.path.join(self.root_dir, str(seq).zfill(2), self.dirname_flow, str(i).zfill(6) + ".flow.npy") for i in past_indices]
+            list_past_flows = [self.read_flows(f) for f in flow_files]
+            past_flows = torch.cat(list_past_flows, dim=0)
         else:
-            past_flows=[]
-
+            past_flows = []
 
         meta = (seq, scan_idx, past_indices)
-        return [meta, past_point_clouds, past_labels,past_flows]
+        return [meta, past_point_clouds, past_labels, past_flows]
 
     def transform_point_cloud(self, past_point_clouds, from_pose, to_pose):
         transformation = torch.Tensor(np.linalg.inv(to_pose) @ from_pose)
@@ -323,9 +304,9 @@ class KittiSequentialDataset(Dataset):
         else:
             return torch.Tensor(1, 1).long()
 
-    def read_flows(self,filename):
-        flow=np.load(filename)
-        flow=torch.tensor(flow)
+    def read_flows(self, filename):
+        flow = np.load(filename)
+        flow = torch.tensor(flow)
         return flow
 
     @staticmethod
