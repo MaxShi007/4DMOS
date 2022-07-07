@@ -70,6 +70,9 @@ def main(weights, sequence, dt, poses, transform):
     #! 自己设置推理的batch_size，不走config
     cfg["TRAIN"]["BATCH_SIZE"] = 4
 
+    #! 设置推理GPU数
+    cfg["TRAIN"]["N_GPUS"]=1
+
     # Load data and model
     cfg["DATA"]["SPLIT"]["TRAIN"] = cfg["DATA"]["SPLIT"]["TEST"]
     cfg["DATA"]["SPLIT"]["VAL"] = cfg["DATA"]["SPLIT"]["TEST"]
