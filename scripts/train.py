@@ -12,7 +12,8 @@ from pytorch_lightning import loggers as pl_loggers
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 
 import sys
-sys.path.append("src") 
+
+sys.path.append("src")
 import mos4d.datasets.datasets as datasets
 import mos4d.models.models as models
 from pytorch_lightning.strategies import DDPStrategy
@@ -69,28 +70,25 @@ def main(config, weights, checkpoint):
     # Logger
     log_dir = "./logs"
     os.makedirs(log_dir, exist_ok=True)
-    tb_logger = pl_loggers.TensorBoardLogger(
-        log_dir, name=cfg["EXPERIMENT"]["ID"], default_hp_metric=False
-    )
+    tb_logger = pl_loggers.TensorBoardLogger(log_dir, name=cfg["EXPERIMENT"]["ID"], default_hp_metric=False)
 
     # Setup trainer
     trainer = Trainer(
         gpus=cfg["TRAIN"]["N_GPUS"],
         logger=tb_logger,
-        # max_epochs=cfg["TRAIN"]["MAX_EPOCH"],
-        max_epochs=150,
+        max_epochs=cfg["TRAIN"]["MAX_EPOCH"],
+        # max_epochs=150,
         accumulate_grad_batches=cfg["TRAIN"]["ACC_BATCHES"],
         callbacks=[lr_monitor, checkpoint_saver],
         accelerator="gpu",
-        strategy=DDPStrategy(find_unused_parameters=False)
-    )
+        strategy=DDPStrategy(find_unused_parameters=False))
 
     # Train!
     trainer.fit(model, data, ckpt_path=checkpoint)
 
 
 if __name__ == "__main__":
-    os.environ['SWITCH']='run' # run debug
-    os.environ['CUDA_VISIBLE_DEVICES']='0,1,2,3'
-    os.environ['DATA']='/share/sgb/semantic_kitti/dataset/sequences'
+    os.environ['SWITCH'] = 'run'  # run debug
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
+    os.environ['DATA'] = '/share/sgb/semantic_kitti/dataset/sequences'
     main()

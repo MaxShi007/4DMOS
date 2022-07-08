@@ -149,10 +149,10 @@ class KittiSequentialDataset(Dataset):
 
         # Semantic information
         #!
-        # self.use_flow=self.cfg["DATA"]["FLOW"]["USE_FLOW"]
-        # self.dirname_flow=self.cfg["DATA"]["FLOW"]["FLOW_DIR_NAME"]
+        self.use_flow = self.cfg["DATA"]["FLOW"]["USE_FLOW"]
+        self.dirname_flow = self.cfg["DATA"]["FLOW"]["FLOW_DIR_NAME"]
 
-        self.use_flow = False
+        # self.use_flow = False
         #!
         if self.use_flow:
             print("Use flow:", self.use_flow)

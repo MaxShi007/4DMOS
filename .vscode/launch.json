@@ -13,7 +13,7 @@
             "justMyCode": true,
             "args": [
                 "-p",
-                "/root/4DMOS/predictions/repaper_multipgpu/08",
+                "/root/sgb_repo/4DMOS/predictions/10_scans/4DMOS_POSES",
                 "-s",
                 "non-overlapping",
                 // "bayes",
@@ -35,8 +35,8 @@
                 "/share/sgb/4DMOS/logs/10_scans.ckpt",
                 "-seq",
                 "08",
-                // "-poses",
-                // "08.txt"
+                "-poses",
+                "4DMOS_POSES.txt"
             ]
         },
         {

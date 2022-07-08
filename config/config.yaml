@@ -1,18 +1,18 @@
 EXPERIMENT:
-  ID: repaper_multipgpu # Give your logs and model a unique name
+  ID: motionflow_egomotion_4DMOS_POSES_1_multipgpu # Give your logs and model a unique name
 
 ##Data
 DATA:
   TRANSFORM: True # If true, the points are pose-aligned before feeding to the model
-  POSES: "poses.txt" # Name of the pose file provided in each sequence folder
+  POSES: "4DMOS_POSES.txt" # Name of the pose file provided in each sequence folder
   SHUFFLE: True
   NUM_WORKER: 4
   DELTA_T_DATA: 0.1 # Time between scans in the dataset (0.1s for KITTI)
   VOXEL_SIZE: 0.1 # Used for discretization in x,y,z when creating a sparse tensor 
   SEMANTIC_CONFIG_FILE: "./config/semantic-kitti-mos.yaml" 
   FLOW:
-    USE_FLOW: False # True False
-    FLOW_DIR_NAME: "motionflow_ego_motion_1"
+    USE_FLOW: True # True False
+    FLOW_DIR_NAME: "motionflow_egomotion_4DMOS_POSES_1"
   SPLIT:
     TRAIN:
       - 0

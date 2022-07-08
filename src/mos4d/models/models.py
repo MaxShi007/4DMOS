@@ -184,9 +184,9 @@ class MOSModel(nn.Module):
         ds = cfg["DATA"]["VOXEL_SIZE"]
         self.quantization = torch.Tensor([ds, ds, ds, self.dt_prediction])
         #!
-        # self.use_flow=cfg["DATA"]["FLOW"]["USE_FLOW"]
+        self.use_flow = cfg["DATA"]["FLOW"]["USE_FLOW"]
 
-        self.use_flow = False
+        # self.use_flow = False
         #!
 
         if self.use_flow:
