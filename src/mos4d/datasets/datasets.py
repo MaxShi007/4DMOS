@@ -224,12 +224,15 @@ class KittiSequentialDataset(Dataset):
         """
         seq, scan_idx = self.idx_mapper[idx]
 
+        # TODO load mask...
+
         # Load past point clouds
         from_idx = scan_idx - self.skip * (self.n_past_steps - 1)
         to_idx = scan_idx + 1
         past_indices = list(range(from_idx, to_idx, self.skip))
         past_files = self.filenames[seq][from_idx:to_idx:self.skip]
         list_past_point_clouds = [self.read_point_cloud(f) for f in past_files]
+        # TODO mask point...
         for i, pcd in enumerate(list_past_point_clouds):
 
             # Transform to current viewpoint
@@ -247,6 +250,7 @@ class KittiSequentialDataset(Dataset):
         label_files = [os.path.join(self.root_dir, str(seq).zfill(2), "labels", str(i).zfill(6) + ".label") for i in past_indices]
 
         list_past_labels = [self.read_labels(f) for f in label_files]
+        # TODO mask label...
         for i, labels in enumerate(list_past_labels):
             time_index = i - self.n_past_steps + 1
             timestamp = round(time_index * self.dt_pred, 3)
@@ -255,14 +259,16 @@ class KittiSequentialDataset(Dataset):
 
         if self.augment:
             past_point_clouds, past_labels = self.augment_data(past_point_clouds, past_labels)
-        # todo load past flow
+
         if self.use_flow:
             flow_files = [os.path.join(self.root_dir, str(seq).zfill(2), self.dirname_flow, str(i).zfill(6) + ".flow.npy") for i in past_indices]
             list_past_flows = [self.read_flows(f) for f in flow_files]
+            # TODO mask flow... 如果需要的话，如果是读pointpwc的数据的话是不需要mask的，这里需要加一个参数控制
             past_flows = torch.cat(list_past_flows, dim=0)
         else:
             past_flows = []
-
+            
+        # TODO mask通过meta传递
         meta = (seq, scan_idx, past_indices)
         return [meta, past_point_clouds, past_labels, past_flows]
 

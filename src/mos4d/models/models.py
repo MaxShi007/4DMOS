@@ -77,7 +77,7 @@ class MOSNet(LightningModule):
             for dict_confusion_matrix in list_dict_confusion_matrix:
                 agg_confusion_matrix = agg_confusion_matrix.add(dict_confusion_matrix[s])
             iou = self.ClassificationMetrics.getIoU(agg_confusion_matrix)
-            self.log("val_moving_iou_step{}".format(s), iou[2].item(), rank_zero_only=True)
+            self.log("train_moving_iou_step{}".format(s), iou[2].item(), rank_zero_only=True)
 
         torch.cuda.empty_cache()
 
