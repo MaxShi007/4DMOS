@@ -91,4 +91,5 @@ if __name__ == "__main__":
     os.environ['SWITCH'] = 'run'  # run debug
     os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
     os.environ['DATA'] = '/share/sgb/semantic_kitti/dataset/sequences'
+    os.environ['GROUND'] = "/share/sgb/kitti-ground"
     main()

@@ -32,9 +32,9 @@
             "justMyCode": true,
             "args": [
                 "-w",
-                "/share/sgb/4DMOS/logs/10_scans.ckpt",
+                "/root/4DMOS/logs/debug/version_0/checkpoints/debug_epoch=001_val_moving_iou_step0=0.027.ckpt",
                 "-seq",
-                "08",
+                "04",
                 "-poses",
                 "4DMOS_POSES.txt"
             ]
@@ -53,7 +53,7 @@
             "request": "launch",
             "program": "scripts/train.py",
             "console": "integratedTerminal",
-            "justMyCode": false
+            "justMyCode": true
         }
     ]
 }
