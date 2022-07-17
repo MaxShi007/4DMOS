@@ -84,7 +84,7 @@ class MOSNet(LightningModule):
     def validation_step(self, batch: tuple, batch_idx):
         batch_size = len(batch[0])
         meta, past_point_clouds, past_labels, past_flows = batch
-        mask = meta[0][3].detach().cpu().numpy()
+        # mask = meta[0][3].detach().cpu().numpy()
         # print(np.unique(mask, return_counts=True))
         out = self.forward(past_point_clouds, past_flows)
 
