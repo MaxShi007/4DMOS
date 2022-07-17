@@ -1,0 +1,72 @@
+EXPERIMENT:
+  ID: motionflow_egomotion_4DMOS_POSES_1_kittiroad_multipgpu # Give your logs and model a unique name
+
+##Data
+DATA:
+  TRANSFORM: True # If true, the points are pose-aligned before feeding to the model
+  POSES: "4DMOS_POSES.txt" # Name of the pose file provided in each sequence folder
+  SHUFFLE: True
+  NUM_WORKER: 4
+  DELTA_T_DATA: 0.1 # Time between scans in the dataset (0.1s for KITTI)
+  VOXEL_SIZE: 0.1 # Used for discretization in x,y,z when creating a sparse tensor 
+  SEMANTIC_CONFIG_FILE: "./config/semantic-kitti-mos.yaml" 
+  REMOVE_GROUND_POINTLABEL: False
+  FLOW:
+    USE_FLOW: True # True False
+    REMOVE_GROUND_FLOW: False # default: False maybe need to train non_ground_gt_flow,then set true
+    FLOW_DIR_NAME: "motionflow_egomotion_4DMOS_POSES_1"
+  SPLIT:
+    TRAIN:
+      - 0
+      - 1
+      - 2
+      - 3
+      - 4
+      - 5
+      - 6
+      - 7
+      - 9
+      - 10
+      - 30 # 297  add new kitti-road seq
+      - 31 # 188  add new kitti-road seq
+      - 32 # 430  add new kitti-road seq
+      - 33 # 430  add new kitti-road seq
+      - 34 # 390  add new kitti-road seq
+      - 40 # 1170 add new kitti-road seq
+    VAL:
+      - 8
+      - 35 # 78   add new kitti-road seq
+      - 36 # 420  add new kitti-road seq
+      - 37 # 936  add new kitti-road seq
+      - 38 # 339  add new kitti-road seq
+      - 39 # 279  add new kitti-road seq
+      - 41 # 837  add new kitti-road seq
+    TEST:
+      - 11
+      - 12
+      - 13
+      - 14
+      - 15
+      - 16
+      - 17
+      - 18
+      - 19
+      - 20
+      - 21
+ 
+##Training
+TRAIN:
+  N_GPUS: 4
+  MAX_EPOCH: 60
+  LR: 0.0001
+  LR_EPOCH: 1
+  LR_DECAY: 0.99
+  WEIGHT_DECAY: 0.0001
+  BATCH_SIZE: 6 # single gpu
+  ACC_BATCHES: 1
+  AUGMENTATION: True
+
+##Network
+MODEL:
+  DELTA_T_PREDICTION: 0.1 # Temporal resolution of scans
+  N_PAST_STEPS: 10
