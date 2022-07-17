@@ -141,6 +141,7 @@ class KittiSequentialDataset(Dataset):
         """
         self.cfg = cfg
         self.root_dir = os.environ.get("DATA")
+        self.ground_dir = os.environ.get("GROUND")
 
         # Pose information
         self.transform = self.cfg["DATA"]["TRANSFORM"]
@@ -151,6 +152,8 @@ class KittiSequentialDataset(Dataset):
         #!
         self.use_flow = self.cfg["DATA"]["FLOW"]["USE_FLOW"]
         self.dirname_flow = self.cfg["DATA"]["FLOW"]["FLOW_DIR_NAME"]
+        self.need_mask_flow = self.cfg["DATA"]["FLOW"]["REMOVE_GROUND_FLOW"]
+        self.need_mask_pointlabel = self.cfg["DATA"]["REMOVE_GROUND_POINTLABEL"]
 
         # self.use_flow = False
         #!
@@ -224,17 +227,14 @@ class KittiSequentialDataset(Dataset):
         """
         seq, scan_idx = self.idx_mapper[idx]
 
-        # TODO load mask...
-
         # Load past point clouds
         from_idx = scan_idx - self.skip * (self.n_past_steps - 1)
         to_idx = scan_idx + 1
         past_indices = list(range(from_idx, to_idx, self.skip))
+
         past_files = self.filenames[seq][from_idx:to_idx:self.skip]
         list_past_point_clouds = [self.read_point_cloud(f) for f in past_files]
-        # TODO mask point...
         for i, pcd in enumerate(list_past_point_clouds):
-
             # Transform to current viewpoint
             if self.transform:
                 from_pose = self.poses[seq][past_indices[i]]
@@ -244,32 +244,47 @@ class KittiSequentialDataset(Dataset):
             timestamp = round(time_index * self.dt_pred, 3)
             list_past_point_clouds[i] = self.timestamp_tensor(pcd, timestamp)
 
-        past_point_clouds = torch.cat(list_past_point_clouds, dim=0)
-
         # Load past labels
         label_files = [os.path.join(self.root_dir, str(seq).zfill(2), "labels", str(i).zfill(6) + ".label") for i in past_indices]
-
         list_past_labels = [self.read_labels(f) for f in label_files]
-        # TODO mask label...
         for i, labels in enumerate(list_past_labels):
             time_index = i - self.n_past_steps + 1
             timestamp = round(time_index * self.dt_pred, 3)
             list_past_labels[i] = self.timestamp_tensor(labels, timestamp)
-        past_labels = torch.cat(list_past_labels, dim=0)
 
-        if self.augment:
-            past_point_clouds, past_labels = self.augment_data(past_point_clouds, past_labels)
+        # TODO load mask...
+        if self.need_mask_pointlabel:
+            non_ground_mask_files = [os.path.join(self.ground_dir, str(seq).zfill(2), "ground_labels", str(i).zfill(6) + ".label") for i in past_indices]
+            list_past_masks = [self.read_mask(f) for f in non_ground_mask_files]
+            for i, mask in enumerate(list_past_masks):
+                time_index = i - self.n_past_steps + 1
+                timestamp = round(time_index * self.dt_pred, 3)
+                list_past_masks[i] = self.timestamp_tensor(mask.reshape(-1, 1), timestamp)
+            past_masks = torch.cat(list_past_masks, dim=0)
+
+            list_past_point_clouds = [past_point_cloud[past_mask[:, 0].bool()] for past_point_cloud, past_mask in zip(list_past_point_clouds, list_past_masks)]
+            list_past_labels = [past_label[past_mask[:, 0].bool()] for past_label, past_mask in zip(list_past_labels, list_past_masks)]
+
+        past_point_clouds = torch.cat(list_past_point_clouds, dim=0)
+        past_labels = torch.cat(list_past_labels, dim=0)
 
         if self.use_flow:
             flow_files = [os.path.join(self.root_dir, str(seq).zfill(2), self.dirname_flow, str(i).zfill(6) + ".flow.npy") for i in past_indices]
             list_past_flows = [self.read_flows(f) for f in flow_files]
             # TODO mask flow... 如果需要的话，如果是读pointpwc的数据的话是不需要mask的，这里需要加一个参数控制
+            if self.need_mask_flow:
+                list_past_flows = [past_flows[past_mask[:, 0].bool()] for past_flows, past_mask in zip(list_past_flows, list_past_masks)]
             past_flows = torch.cat(list_past_flows, dim=0)
+
+            assert past_flows.shape[0] == past_point_clouds.shape[0] == past_labels.shape[0], "flow and point cloud and label should have the same length"
         else:
             past_flows = []
-            
+
         # TODO mask通过meta传递
-        meta = (seq, scan_idx, past_indices)
+        if self.need_mask_pointlabel:
+            meta = (seq, scan_idx, past_indices, past_masks)
+        else:
+            meta = (seq, scan_idx, past_indices)
         return [meta, past_point_clouds, past_labels, past_flows]
 
     def transform_point_cloud(self, past_point_clouds, from_pose, to_pose):
@@ -314,6 +329,13 @@ class KittiSequentialDataset(Dataset):
         flow = np.load(filename)
         flow = torch.tensor(flow)
         return flow
+
+    def read_mask(self, filename):
+        mask = np.fromfile(filename, dtype=np.uint32)
+        mask = mask.reshape((-1))
+        sem = mask & 0xFFFF
+        mask = (sem != 9)
+        return torch.tensor(mask)
 
     @staticmethod
     def timestamp_tensor(tensor, time):

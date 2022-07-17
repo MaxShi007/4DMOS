@@ -1,5 +1,5 @@
 EXPERIMENT:
-  ID: motionflow_egomotion_4DMOS_POSES_1_multipgpu # Give your logs and model a unique name
+  ID: debug # Give your logs and model a unique name
 
 ##Data
 DATA:
@@ -10,8 +10,13 @@ DATA:
   DELTA_T_DATA: 0.1 # Time between scans in the dataset (0.1s for KITTI)
   VOXEL_SIZE: 0.1 # Used for discretization in x,y,z when creating a sparse tensor 
   SEMANTIC_CONFIG_FILE: "./config/semantic-kitti-mos.yaml" 
+  REMOVE_GROUND_POINTLABEL: True
   FLOW:
     USE_FLOW: True # True False
+<<<<<<< HEAD
+=======
+    REMOVE_GROUND_FLOW: False # default: False maybe need to train non_ground_gt_flow,then set true
+>>>>>>> 6b8ec3fe0d54a464485622c1cb0c75cd79bf9948
     FLOW_DIR_NAME: "motionflow_egomotion_4DMOS_POSES_1"
   SPLIT:
     TRAIN:
@@ -43,7 +48,7 @@ DATA:
 ##Training
 TRAIN:
   N_GPUS: 4
-  MAX_EPOCH: 60
+  MAX_EPOCH: 2
   LR: 0.0001
   LR_EPOCH: 1
   LR_DECAY: 0.99

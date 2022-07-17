@@ -84,12 +84,12 @@ class MOSNet(LightningModule):
     def validation_step(self, batch: tuple, batch_idx):
         batch_size = len(batch[0])
         meta, past_point_clouds, past_labels, past_flows = batch
-
+        mask = meta[0][3].detach().cpu().numpy()
+        # print(np.unique(mask, return_counts=True))
         out = self.forward(past_point_clouds, past_flows)
 
         loss = self.getLoss(out, past_labels)
         self.log("val_loss", loss.item(), batch_size=batch_size, prog_bar=True, on_epoch=True, sync_dist=True)
-        # self.log("val_loss", loss.item(), batch_size=batch_size, prog_bar=True, on_epoch=True,sync_dist=True)
 
         dict_confusion_matrix = {}
         for s in range(self.n_past_steps):
@@ -119,7 +119,7 @@ class MOSNet(LightningModule):
         out = self.forward(past_point_clouds, past_flows)
 
         for b in range(len(batch[0])):
-            seq, idx, past_indices = meta[b]
+            seq, idx, past_indices, non_ground_mask = meta[b]
             path = os.path.join(
                 "predictions",
                 self.id,
@@ -137,9 +137,16 @@ class MOSNet(LightningModule):
                 mask = coords[:, -1].isclose(torch.tensor(t))
                 masked_logits = logits[mask]
 
-                masked_logits[:, self.ignore_index] = -float("inf")
+                mask = non_ground_mask[:, -1].isclose(torch.tensor(t))  #step t 的mask
+                non_ground_mask_t = non_ground_mask[mask]  #取出step t 的mask
+                include_ground_logits = torch.zeros((len(non_ground_mask_t), self.n_classes)).type_as(logits)
+                include_ground_logits[:, 1] = 1.0  #地面点都置为静态点
+                include_ground_logits[non_ground_mask_t[:, 0].bool()] = masked_logits
+                # print(np.sum(include_ground_logits.detach().cpu().numpy()[:, 1] == 1))
 
-                pred_softmax = F.softmax(masked_logits, dim=1)
+                include_ground_logits[:, self.ignore_index] = -float("inf")
+
+                pred_softmax = F.softmax(include_ground_logits, dim=1)
                 pred_softmax = pred_softmax.detach().cpu().numpy()
                 assert pred_softmax.shape[1] == 3
                 assert pred_softmax.shape[0] >= 0

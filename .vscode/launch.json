@@ -32,9 +32,13 @@
             "justMyCode": true,
             "args": [
                 "-w",
+<<<<<<< HEAD
                 "/root/sgb_repo/4DMOS/logs/motionflow_egomotion_4DMOS_POSES_1_multipgpu/version_1/checkpoints/motionflow_egomotion_4DMOS_POSES_1_multipgpu_epoch=048_val_moving_iou_step0=0.692.ckpt",
+=======
+                "/root/4DMOS/logs/debug/version_0/checkpoints/debug_epoch=001_val_moving_iou_step0=0.027.ckpt",
+>>>>>>> 6b8ec3fe0d54a464485622c1cb0c75cd79bf9948
                 "-seq",
-                "08",
+                "04",
                 "-poses",
                 "4DMOS_POSES.txt"
             ]
@@ -53,7 +57,7 @@
             "request": "launch",
             "program": "scripts/train.py",
             "console": "integratedTerminal",
-            "justMyCode": false
+            "justMyCode": true
         }
     ]
 }
