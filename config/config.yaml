@@ -13,10 +13,7 @@ DATA:
   REMOVE_GROUND_POINTLABEL: True
   FLOW:
     USE_FLOW: True # True False
-<<<<<<< HEAD
-=======
     REMOVE_GROUND_FLOW: False # default: False maybe need to train non_ground_gt_flow,then set true
->>>>>>> 6b8ec3fe0d54a464485622c1cb0c75cd79bf9948
     FLOW_DIR_NAME: "motionflow_egomotion_4DMOS_POSES_1"
   SPLIT:
     TRAIN:
