@@ -1,5 +1,5 @@
 EXPERIMENT:
-  ID: motionflow_egomotion_4DMOS_POSES_1_kittiroad_multipgpu # Give your logs and model a unique name
+  ID: kittiroad_4dmos_poses_multipgpu # Give your logs and model a unique name
 
 ##Data
 DATA:
@@ -12,7 +12,7 @@ DATA:
   SEMANTIC_CONFIG_FILE: "./config/semantic-kitti-mos.yaml" 
   REMOVE_GROUND_POINTLABEL: False
   FLOW:
-    USE_FLOW: True # True False
+    USE_FLOW: False # True False
     REMOVE_GROUND_FLOW: False # default: False maybe need to train non_ground_gt_flow,then set true
     FLOW_DIR_NAME: "motionflow_egomotion_4DMOS_POSES_1"
   SPLIT:
