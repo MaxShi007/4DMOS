@@ -11,7 +11,8 @@ from tqdm import tqdm
 import numpy as np
 
 import sys
-sys.path.append("src") 
+
+sys.path.append("src")
 from mos4d.datasets.utils import load_files
 
 
@@ -80,15 +81,11 @@ def main(path, strategy, sequence, prior, dt):
         dict_confidences = {}
         for current_idx, predicted_confidences in current.items():
             for predicted_confidence in predicted_confidences:
-                path_to_confidence = os.path.join(
-                    path_to_sequence, current_idx, predicted_confidence
-                )
+                path_to_confidence = os.path.join(path_to_sequence, current_idx, predicted_confidence)
 
                 # Consider prediction if done with desired temporal resolution
                 pred_idx = predicted_confidence.split("_")[0]
-                temporal_resolution = float(
-                    predicted_confidence.split("_")[-1].split(".")[0]
-                )
+                temporal_resolution = float(predicted_confidence.split("_")[-1].split(".")[0])
                 if temporal_resolution == dt:
                     if pred_idx not in dict_confidences:
                         dict_confidences[pred_idx] = [path_to_confidence]
@@ -120,7 +117,7 @@ def main(path, strategy, sequence, prior, dt):
 
 
 def verify_predictions(seq, pred_path, semantic_config):
-    data_root=os.environ.get("DATA")
+    data_root = os.environ.get("DATA")
     path_to_seq = os.path.join(data_root, str(seq).zfill(2))
     scan_path = os.path.join(path_to_seq, "velodyne")
     filenames = load_files(scan_path)
@@ -171,8 +168,11 @@ def log_odds_to_prob(log_odds):
 
 if __name__ == "__main__":
     os.environ['SWITCH'] = 'run'  # run debug
-    os.environ['OMP_NUM_THREADS']='12'
+    os.environ['OMP_NUM_THREADS'] = '12'
     os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
     os.environ['DATA'] = '/share/sgb/semantic_kitti/dataset/sequences'
     os.environ['GROUND'] = "/share/sgb/kitti-ground"
     main()
+
+# python scripts/confidences_to_labels.py -p /root/sgb_repo/4DMOS/predictions/motionflow_egomotion_4DMOS_POSES_1_multipgpu/4DMOS_POSES -seq 08 -s bayes -prior 0.25
+# -s non-overlapping

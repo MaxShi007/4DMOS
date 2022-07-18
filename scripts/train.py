@@ -73,14 +73,7 @@ def main(config, weights, checkpoint):
     tb_logger = pl_loggers.TensorBoardLogger(log_dir, name=cfg["EXPERIMENT"]["ID"], default_hp_metric=False)
 
     # Setup trainer
-    trainer = Trainer(
-        gpus=cfg["TRAIN"]["N_GPUS"],
-        logger=tb_logger,
-        max_epochs=cfg["TRAIN"]["MAX_EPOCH"],
-        accumulate_grad_batches=cfg["TRAIN"]["ACC_BATCHES"],
-        callbacks=[lr_monitor, checkpoint_saver],
-        accelerator="gpu",
-        strategy=DDPStrategy(find_unused_parameters=False))
+    trainer = Trainer(gpus=cfg["TRAIN"]["N_GPUS"], logger=tb_logger, max_epochs=cfg["TRAIN"]["MAX_EPOCH"], accumulate_grad_batches=cfg["TRAIN"]["ACC_BATCHES"], callbacks=[lr_monitor, checkpoint_saver], accelerator="gpu", strategy=DDPStrategy(find_unused_parameters=False))
 
     # Train!
     trainer.fit(model, data, ckpt_path=checkpoint)
@@ -88,7 +81,7 @@ def main(config, weights, checkpoint):
 
 if __name__ == "__main__":
     os.environ['SWITCH'] = 'run'  # run debug
-    os.environ['OMP_NUM_THREADS']='12'
+    os.environ['OMP_NUM_THREADS'] = '12'
     os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
     os.environ['DATA'] = '/share/sgb/semantic_kitti/dataset/sequences'
     os.environ['GROUND'] = "/share/sgb/kitti-ground"

@@ -62,7 +62,7 @@ TRAIN:
   LR_EPOCH: 1
   LR_DECAY: 0.99
   WEIGHT_DECAY: 0.0001
-  BATCH_SIZE: 6 # single gpu
+  BATCH_SIZE: 7 # single gpu
   ACC_BATCHES: 1
   AUGMENTATION: True
 
