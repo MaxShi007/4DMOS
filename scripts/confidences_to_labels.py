@@ -170,7 +170,9 @@ def log_odds_to_prob(log_odds):
 
 
 if __name__ == "__main__":
-    os.environ['SWITCH']='run' # run debug
-    os.environ['CUDA_VISIBLE_DEVICES']='3'
-    os.environ['DATA']='/share/sgb/semantic_kitti/dataset/sequences'
+    os.environ['SWITCH'] = 'run'  # run debug
+    os.environ['OMP_NUM_THREADS']='12'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
+    os.environ['DATA'] = '/share/sgb/semantic_kitti/dataset/sequences'
+    os.environ['GROUND'] = "/share/sgb/kitti-ground"
     main()

@@ -42,6 +42,9 @@ class MOSNet(LightningModule):
 
         self.ClassificationMetrics = ClassificationMetrics(self.n_classes, self.ignore_index)
 
+        self.need_mask_pointlabel = self.hparams["DATA"]["REMOVE_GROUND_POINTLABEL"]  
+        self.need_mask_flow = self.hparams["DATA"]["FLOW"]["REMOVE_GROUND_FLOW"]  
+
     def getLoss(self, out: ME.TensorField, past_labels: list):
         loss = self.MOSLoss.compute_loss(out, past_labels)
         return loss
@@ -51,9 +54,6 @@ class MOSNet(LightningModule):
         return out
 
     def training_step(self, batch: tuple, batch_idx, dataloader_index=0):
-        # if os.environ["SWITCH"]=="debug":
-        #     pass
-        # else:
         batch_size = len(batch[0])
         _, past_point_clouds, past_labels, past_flows = batch
 
@@ -77,15 +77,14 @@ class MOSNet(LightningModule):
             for dict_confusion_matrix in list_dict_confusion_matrix:
                 agg_confusion_matrix = agg_confusion_matrix.add(dict_confusion_matrix[s])
             iou = self.ClassificationMetrics.getIoU(agg_confusion_matrix)
-            self.log("train_moving_iou_step{}".format(s), iou[2].item(), rank_zero_only=True)
+            self.log("train_moving_iou_step{}".format(s), iou[2].item()) # 把rank_zero_only=True去了，没死锁，就这样了
 
         torch.cuda.empty_cache()
 
     def validation_step(self, batch: tuple, batch_idx):
         batch_size = len(batch[0])
         meta, past_point_clouds, past_labels, past_flows = batch
-        # mask = meta[0][3].detach().cpu().numpy()
-        # print(np.unique(mask, return_counts=True))
+
         out = self.forward(past_point_clouds, past_flows)
 
         loss = self.getLoss(out, past_labels)
@@ -104,62 +103,98 @@ class MOSNet(LightningModule):
             for dict_confusion_matrix in validation_step_outputs:
                 agg_confusion_matrix = agg_confusion_matrix.add(dict_confusion_matrix[s])
             iou = self.ClassificationMetrics.getIoU(agg_confusion_matrix)
-
-            # if self.trainer.is_global_zero:
-            #     self.log("val_moving_iou_step{}".format(s), iou[2].item(),rank_zero_only=True)
-            # else:
-            #     self.log("val_moving_iou_step{}".format(s), iou[2].item())
-            self.log("val_moving_iou_step{}".format(s), iou[2].item(), rank_zero_only=True)
+            self.log("val_moving_iou_step{}".format(s), iou[2].item()) # 把rank_zero_only=True去了，没死锁，就这样了
 
         torch.cuda.empty_cache()
 
     def predict_step(self, batch: tuple, batch_idx: int, dataloader_idx: int = None):
         # torch.set_grad_enabled(True)
-        meta, past_point_clouds, past_labels, past_flows = batch
-        out = self.forward(past_point_clouds, past_flows)
+        if self.need_mask_pointlabel:
+            meta, past_point_clouds, past_labels, past_flows = batch
+            out = self.forward(past_point_clouds, past_flows)
 
-        for b in range(len(batch[0])):
-            seq, idx, past_indices, non_ground_mask = meta[b]
-            path = os.path.join(
-                "predictions",
-                self.id,
-                self.poses,
-                "confidences",
-                str(seq).zfill(2),
-                str(idx).zfill(6),
-            )
-            os.makedirs(path, exist_ok=True)
-            for step in range(self.n_past_steps):
-                coords = out.coordinates_at(b)
-                logits = out.features_at(b)
-
-                t = round(-step * self.dt_prediction, 3)
-                mask = coords[:, -1].isclose(torch.tensor(t))
-                masked_logits = logits[mask]
-
-                mask = non_ground_mask[:, -1].isclose(torch.tensor(t))  #step t 的mask
-                non_ground_mask_t = non_ground_mask[mask]  #取出step t 的mask
-                include_ground_logits = torch.zeros((len(non_ground_mask_t), self.n_classes)).type_as(logits)
-                include_ground_logits[:, 1] = 1.0  #地面点都置为静态点
-                include_ground_logits[non_ground_mask_t[:, 0].bool()] = masked_logits
-                # print(np.sum(include_ground_logits.detach().cpu().numpy()[:, 1] == 1))
-
-                include_ground_logits[:, self.ignore_index] = -float("inf")
-
-                pred_softmax = F.softmax(include_ground_logits, dim=1)
-                pred_softmax = pred_softmax.detach().cpu().numpy()
-                assert pred_softmax.shape[1] == 3
-                assert pred_softmax.shape[0] >= 0
-                sum = np.sum(pred_softmax[:, 1:3], axis=1)
-                assert np.isclose(sum, np.ones_like(sum)).all()
-                moving_confidence = pred_softmax[:, 2]
-
-                file_name = os.path.join(
-                    path,
-                    str(past_indices[-step - 1]).zfill(6) + "_dt_{:.0e}".format(self.dt_prediction) + ".npy",
+            for b in range(len(batch[0])):
+                seq, idx, past_indices, non_ground_mask = meta[b]
+                path = os.path.join(
+                    "predictions",
+                    self.id,
+                    self.poses,
+                    "confidences",
+                    str(seq).zfill(2),
+                    str(idx).zfill(6),
                 )
+                os.makedirs(path, exist_ok=True)
+                for step in range(self.n_past_steps):
+                    coords = out.coordinates_at(b)
+                    logits = out.features_at(b)
 
-                np.save(file_name, moving_confidence)
+                    t = round(-step * self.dt_prediction, 3)
+                    mask = coords[:, -1].isclose(torch.tensor(t))
+                    masked_logits = logits[mask]
+
+                    mask = non_ground_mask[:, -1].isclose(torch.tensor(t))  #step t 的mask
+                    non_ground_mask_t = non_ground_mask[mask]  #取出step t 的mask
+                    include_ground_logits = torch.zeros((len(non_ground_mask_t), self.n_classes)).type_as(logits)
+                    include_ground_logits[:, 1] = 1.0  #地面点都置为静态点
+                    include_ground_logits[non_ground_mask_t[:, 0].bool()] = masked_logits
+                    # print(np.sum(include_ground_logits.detach().cpu().numpy()[:, 1] == 1))
+
+                    include_ground_logits[:, self.ignore_index] = -float("inf")
+
+                    pred_softmax = F.softmax(include_ground_logits, dim=1)
+                    pred_softmax = pred_softmax.detach().cpu().numpy()
+                    assert pred_softmax.shape[1] == 3
+                    assert pred_softmax.shape[0] >= 0
+                    sum = np.sum(pred_softmax[:, 1:3], axis=1)
+                    assert np.isclose(sum, np.ones_like(sum)).all()
+                    moving_confidence = pred_softmax[:, 2]
+
+                    file_name = os.path.join(
+                        path,
+                        str(past_indices[-step - 1]).zfill(6) + "_dt_{:.0e}".format(self.dt_prediction) + ".npy",
+                    )
+
+                    np.save(file_name, moving_confidence)
+        else:
+            meta, past_point_clouds, past_labels, past_flows = batch
+            out = self.forward(past_point_clouds, past_flows)
+
+            for b in range(len(batch[0])):
+                seq, idx, past_indices = meta[b]
+                path = os.path.join(
+                    "predictions",
+                    self.id,
+                    self.poses,
+                    "confidences",
+                    str(seq).zfill(2),
+                    str(idx).zfill(6),
+                )
+                os.makedirs(path, exist_ok=True)
+                for step in range(self.n_past_steps):
+                    coords = out.coordinates_at(b)
+                    logits = out.features_at(b)
+
+                    t = round(-step * self.dt_prediction, 3)
+                    mask = coords[:, -1].isclose(torch.tensor(t))
+                    masked_logits = logits[mask]
+
+                    masked_logits[:, self.ignore_index] = -float("inf")
+
+                    pred_softmax = F.softmax(masked_logits, dim=1)
+                    pred_softmax = pred_softmax.detach().cpu().numpy()
+                    assert pred_softmax.shape[1] == 3
+                    assert pred_softmax.shape[0] >= 0
+                    sum = np.sum(pred_softmax[:, 1:3], axis=1)
+                    assert np.isclose(sum, np.ones_like(sum)).all()
+                    moving_confidence = pred_softmax[:, 2]
+
+                    file_name = os.path.join(
+                        path,
+                        str(past_indices[-step - 1]).zfill(6) + "_dt_{:.0e}".format(self.dt_prediction) + ".npy",
+                    )
+
+                    np.save(file_name, moving_confidence)
+
 
         torch.cuda.empty_cache()
 
@@ -204,16 +239,6 @@ class MOSModel(nn.Module):
         self.MinkUNet = CustomMinkUNet(in_channels=in_channel, out_channels=n_classes, D=4)
 
     def forward(self, past_point_clouds, past_flows):
-        # if os.environ.get("SWITCH")=='debug':
-        #     tensor_field=ME.TensorField(features=past_flows, coordinates=past_point_clouds)
-        #     sparse_tensor=tensor_field.sparse()
-        #     predicted_sparse_tensor = self.MinkUNet(sparse_tensor)
-        #     out = predicted_sparse_tensor.slice(tensor_field)
-        #     device=out.device
-        #     quantization = self.quantization.to(device)
-        #     out.coordinates[:, 1:] = torch.mul(out.coordinates[:, 1:], quantization)
-        #     return out
-        # else:
         device = past_point_clouds[0].device
         quantization = self.quantization.to(device)
 

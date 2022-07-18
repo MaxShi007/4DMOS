@@ -77,7 +77,6 @@ def main(config, weights, checkpoint):
         gpus=cfg["TRAIN"]["N_GPUS"],
         logger=tb_logger,
         max_epochs=cfg["TRAIN"]["MAX_EPOCH"],
-        # max_epochs=150,
         accumulate_grad_batches=cfg["TRAIN"]["ACC_BATCHES"],
         callbacks=[lr_monitor, checkpoint_saver],
         accelerator="gpu",
@@ -89,6 +88,7 @@ def main(config, weights, checkpoint):
 
 if __name__ == "__main__":
     os.environ['SWITCH'] = 'run'  # run debug
+    os.environ['OMP_NUM_THREADS']='12'
     os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2,3'
     os.environ['DATA'] = '/share/sgb/semantic_kitti/dataset/sequences'
     os.environ['GROUND'] = "/share/sgb/kitti-ground"
