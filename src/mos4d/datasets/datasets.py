@@ -312,18 +312,10 @@ class KittiSequentialDataset(Dataset):
 
     def read_labels(self, filename):
         """Load moving object labels from .label file"""
-
-        kittiroad = ['30', '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41']
-
         if os.path.isfile(filename):
-            sequence = filename.split('/')[-3]
             labels = np.fromfile(filename, dtype=np.uint32)
             labels = labels.reshape((-1))
             labels = labels & 0xFFFF  # Mask semantics in lower half
-
-            if sequence in kittiroad:  # 因为kittiroad的label只有0和252，0会映射为0，而4dmos在算loss的时候会把0忽略，所以要把0换成静态点9，这样就会映射为1，参与loss计算了
-                labels[labels == 0] = 9
-
             mapped_labels = copy.deepcopy(labels)
             for k, v in self.semantic_config["learning_map"].items():
                 mapped_labels[labels == k] = v
