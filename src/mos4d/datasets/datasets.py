@@ -280,6 +280,9 @@ class KittiSequentialDataset(Dataset):
         else:
             past_flows = []
 
+        if self.augment:
+            past_point_clouds, past_labels = self.augment_data(past_point_clouds, past_labels)
+
         # TODO mask通过meta传递
         if self.need_mask_pointlabel:
             meta = (seq, scan_idx, past_indices, past_masks)

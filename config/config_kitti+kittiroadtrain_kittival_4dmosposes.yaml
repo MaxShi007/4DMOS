@@ -1,5 +1,5 @@
 EXPERIMENT:
-  ID: kittiroad_4dmos_poses_multipgpu_nochangecode # Give your logs and model a unique name
+  ID: kitti # Give your logs and model a unique name
 
 ##Data
 DATA:

@@ -42,8 +42,8 @@ class MOSNet(LightningModule):
 
         self.ClassificationMetrics = ClassificationMetrics(self.n_classes, self.ignore_index)
 
-        self.need_mask_pointlabel = self.hparams["DATA"]["REMOVE_GROUND_POINTLABEL"]  
-        self.need_mask_flow = self.hparams["DATA"]["FLOW"]["REMOVE_GROUND_FLOW"]  
+        self.need_mask_pointlabel = self.hparams["DATA"]["REMOVE_GROUND_POINTLABEL"]
+        self.need_mask_flow = self.hparams["DATA"]["FLOW"]["REMOVE_GROUND_FLOW"]
 
     def getLoss(self, out: ME.TensorField, past_labels: list):
         loss = self.MOSLoss.compute_loss(out, past_labels)
@@ -77,7 +77,7 @@ class MOSNet(LightningModule):
             for dict_confusion_matrix in list_dict_confusion_matrix:
                 agg_confusion_matrix = agg_confusion_matrix.add(dict_confusion_matrix[s])
             iou = self.ClassificationMetrics.getIoU(agg_confusion_matrix)
-            self.log("train_moving_iou_step{}".format(s), iou[2].item()) # 把rank_zero_only=True去了，没死锁，就这样了
+            self.log("train_moving_iou_step{}".format(s), iou[2].item(), sync_dist=True)  # 把rank_zero_only=True去了，没死锁，就这样了
 
         torch.cuda.empty_cache()
 
@@ -103,7 +103,7 @@ class MOSNet(LightningModule):
             for dict_confusion_matrix in validation_step_outputs:
                 agg_confusion_matrix = agg_confusion_matrix.add(dict_confusion_matrix[s])
             iou = self.ClassificationMetrics.getIoU(agg_confusion_matrix)
-            self.log("val_moving_iou_step{}".format(s), iou[2].item()) # 把rank_zero_only=True去了，没死锁，就这样了
+            self.log("val_moving_iou_step{}".format(s), iou[2].item(), sync_dist=True)  # 把rank_zero_only=True去了，没死锁，就这样了
 
         torch.cuda.empty_cache()
 
@@ -194,7 +194,6 @@ class MOSNet(LightningModule):
                     )
 
                     np.save(file_name, moving_confidence)
-
 
         torch.cuda.empty_cache()
 
